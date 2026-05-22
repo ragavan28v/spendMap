@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "SpendMap",
-    "slug": "SpendMap",
+    "slug": "spendmap",
+    "owner": "ragavan_v",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -11,6 +12,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.ragavan.spendmap",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -34,11 +36,28 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "703560097131-lc98emonmqklkfdbcbrvlkg3r7l1683t.apps.googleusercontent.com",
+      "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "703560097131-orae629ij2avals4ajf33k8o0ji4f053.apps.googleusercontent.com",
+      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
+      "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCjff2k177H0S9a4N9-VoVO9jxMoBFbHTA",
+      "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "spendmap-7d9a1.firebaseapp.com",
+      "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "spendmap-7d9a1",
+      "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "spendmap-7d9a1.appspot.com",
+      "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "703560097131",
+      "EXPO_PUBLIC_FIREBASE_APP_ID": "1:703560097131:web:7610efcb17b8ecf76c402e",
+      "router": {},
+      "eas": {
+        "projectId": "a3a3d742-91bf-440a-a638-0a8de4e90ce4"
+      }
     }
   }
 }

@@ -1,0 +1,69 @@
+import { Category } from '@/types';
+import { CategoryColors } from './colors';
+
+export const defaultCategories: Category[] = [
+  {
+    id: 'category-food',
+    name: 'Food',
+    color: CategoryColors.food,
+    icon: 'restaurant-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-travel',
+    name: 'Travel',
+    color: CategoryColors.travel,
+    icon: 'airplane-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-shopping',
+    name: 'Shopping',
+    color: CategoryColors.shopping,
+    icon: 'bag-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-bills',
+    name: 'Bills',
+    color: CategoryColors.bills,
+    icon: 'receipt-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-health',
+    name: 'Health',
+    color: CategoryColors.health,
+    icon: 'medkit-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-entertainment',
+    name: 'Entertainment',
+    color: CategoryColors.entertainment,
+    icon: 'film-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-education',
+    name: 'Education',
+    color: CategoryColors.education,
+    icon: 'school-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+  {
+    id: 'category-others',
+    name: 'Others',
+    color: CategoryColors.others,
+    icon: 'ellipsis-horizontal-circle-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
+];
