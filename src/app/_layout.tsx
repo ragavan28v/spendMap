@@ -1,10 +1,12 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation/native';
 import { Slot } from 'expo-router';
 import React, { useEffect } from 'react';
-import { AppState, useColorScheme } from 'react-native';
+import { AppState } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { defaultWallets } from '@/constants/wallets';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { getCurrentFirebaseUserId, observeAuthState } from '@/services/firebase/auth';
 import {
   fetchUserCategories,
@@ -23,7 +25,7 @@ import { useUserStore } from '@/store/userStore';
 import { useWalletStore } from '@/store/walletStore';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const theme = useAppTheme();
   const initializeWallets = useWalletStore((state) => state.initializeWallets);
   const selectWallet = useWalletStore((state) => state.selectWallet);
   const initializeCategories = useCategoryStore((state) => state.initializeCategories);
@@ -171,8 +173,22 @@ export default function RootLayout() {
     };
   }, []);
 
+  const navigationTheme: Theme = {
+    ...(theme.themeMode === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(theme.themeMode === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      background: theme.background,
+      card: theme.surface,
+      border: theme.border,
+      text: theme.text,
+      primary: theme.accent,
+      notification: theme.accent,
+    },
+  };
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
+      <StatusBar style={theme.themeMode === 'dark' ? 'light' : 'dark'} />
       <AnimatedSplashOverlay />
       <Slot />
     </ThemeProvider>

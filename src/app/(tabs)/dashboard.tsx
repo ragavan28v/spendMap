@@ -3,20 +3,23 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MetricCard } from '@/components/ui/metric-card';
-import { WalletCard } from '@/components/wallet/wallet-card';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { TransactionCard } from '@/components/transaction/transaction-card';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRecentTransactions, useTransactionSummary } from '@/hooks/useTransactions';
 import { useWallets } from '@/hooks/useWallet';
+import { formatCurrency } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatCurrency } from '@/utils/formatters';
+import { WalletCard } from '@/components/wallet/wallet-card';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const { totalBalance, walletStats } = useWallets();
   const recentTransactions = useRecentTransactions();
   const summary = useTransactionSummary();
@@ -24,15 +27,22 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 18 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View>
-          <Text style={{ color: Palette.muted, fontSize: 13, fontWeight: '700' }}>SpendMap</Text>
-          <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Money cockpit</Text>
+          <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '700' }}>SpendMap</Text>
+          <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Money cockpit</Text>
         </View>
-        <AppIcon name="notifications-outline" color={Palette.text} backgroundColor="rgba(255,255,255,0.08)" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <AppIcon
+            name="notifications-outline"
+            color={theme.text}
+            backgroundColor={theme.notificationBackground}
+          />
+          <ThemeToggleButton />
+        </View>
       </View>
 
       <Card
@@ -40,18 +50,18 @@ export default function DashboardScreen() {
           padding: 22,
           gap: 20,
           overflow: 'hidden',
-          backgroundColor: '#12213B',
-          borderColor: 'rgba(59, 130, 246, 0.32)',
+          backgroundColor: theme.surfaceElevated,
+          borderColor: `${Palette.blue}50`,
         }}
       >
         <View style={{ position: 'absolute', right: -40, top: -42, width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(16,185,129,0.18)' }} />
         <View style={{ position: 'absolute', left: -50, bottom: -52, width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(59,130,246,0.16)' }} />
         <View style={{ gap: 8 }}>
-          <Text style={{ color: Palette.muted, fontWeight: '800', letterSpacing: 0.4 }}>TOTAL BALANCE</Text>
-          <Text style={{ color: Palette.text, fontSize: 40, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
+          <Text style={{ color: theme.muted, fontWeight: '800', letterSpacing: 0.4 }}>TOTAL BALANCE</Text>
+          <Text style={{ color: theme.text, fontSize: 40, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
             {formatCurrency(totalBalance)}
           </Text>
-          <Text style={{ color: Palette.muted, fontSize: 13 }}>
+          <Text style={{ color: theme.muted, fontSize: 13 }}>
             Split across {walletStats.length} active wallets • updates instantly
           </Text>
         </View>
@@ -107,8 +117,8 @@ export default function DashboardScreen() {
 
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: Palette.text, fontSize: 20, fontWeight: '900' }}>Wallets</Text>
-          <Text style={{ color: Palette.muted, fontSize: 12, fontWeight: '700' }}>Swipe →</Text>
+          <Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>Wallets</Text>
+          <Text style={{ color: theme.muted, fontSize: 12, fontWeight: '700' }}>Swipe →</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
           {walletStats.map((wallet) => (
@@ -119,7 +129,7 @@ export default function DashboardScreen() {
 
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: Palette.text, fontSize: 20, fontWeight: '900' }}>Recent activity</Text>
+          <Text style={{ color: theme.text, fontSize: 20, fontWeight: '900' }}>Recent activity</Text>
           <Text onPress={() => router.push('/history')} style={{ color: Palette.blue, fontSize: 13, fontWeight: '800' }}>
             View all
           </Text>

@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
 import { saveTransactionWithWallet } from '@/services/firebase/firestore';
 import { buildTransaction } from '@/services/finance/transactions';
@@ -19,6 +20,7 @@ const recurringOptions: RecurringType[] = ['none', 'daily', 'weekly', 'monthly']
 
 export default function AddExpenseScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const wallets = useWalletStore((state) => state.wallets.filter((wallet) => wallet.isEnabled));
   const categories = useCategoryStore((state) => state.categories);
   const totalBalance = useWalletStore((state) => state.totalBalance)();
@@ -85,12 +87,12 @@ export default function AddExpenseScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 16 }}
     >
       <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Add expense</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Deduct only from the wallet you choose.</Text>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Add expense</Text>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Deduct only from the wallet you choose.</Text>
       </View>
 
       <Card style={{ padding: 16, gap: 16 }}>
@@ -106,7 +108,7 @@ export default function AddExpenseScreen() {
         />
       </Card>
 
-      <PickerSection title="Wallet used">
+      <PickerSection title="Wallet used" theme={theme}>
         {wallets.map((wallet) => (
           <SelectionChip
             key={wallet.id}
@@ -119,7 +121,7 @@ export default function AddExpenseScreen() {
         ))}
       </PickerSection>
 
-      <PickerSection title="Category">
+      <PickerSection title="Category" theme={theme}>
         {categories.map((category) => (
           <SelectionChip
             key={category.id}
@@ -135,6 +137,7 @@ export default function AddExpenseScreen() {
       <PickerSection
         title={recurringType === 'none' ? 'Repeat schedule' : `Repeats ${recurringType}`}
         helperText="Use this for rent, EMI, subscriptions, and recurring bills."
+        theme={theme}
       >
         {recurringOptions.map((option) => (
           <SelectionChip
@@ -163,15 +166,17 @@ function PickerSection({
   title,
   helperText,
   children,
+  theme,
 }: {
   title: string;
   helperText?: string;
   children: React.ReactNode;
+  theme: ReturnType<typeof useAppTheme>;
 }) {
   return (
     <Card style={{ padding: 16, gap: 12 }}>
-      <Text style={{ color: Palette.text, fontSize: 16, fontWeight: '900' }}>{title}</Text>
-      {helperText ? <Text style={{ color: Palette.muted, fontSize: 12 }}>{helperText}</Text> : null}
+      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{title}</Text>
+      {helperText ? <Text style={{ color: theme.muted, fontSize: 12 }}>{helperText}</Text> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{children}</View>
     </Card>
   );

@@ -1,5 +1,6 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { Palette, Radius } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import React from 'react';
 import { Pressable, Text, ViewStyle } from 'react-native';
 
@@ -13,6 +14,8 @@ interface SelectionChipProps {
 }
 
 export function SelectionChip({ label, selected, icon, color = Palette.blue, onPress, style }: SelectionChipProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -25,16 +28,16 @@ export function SelectionChip({ label, selected, icon, color = Palette.blue, onP
           borderCurve: 'continuous',
           paddingHorizontal: 14,
           paddingVertical: 10,
-          backgroundColor: selected ? `${color}24` : 'rgba(15, 23, 42, 0.52)',
+          backgroundColor: selected ? `${color}24` : theme.chipBackground,
           borderWidth: 1,
-          borderColor: selected ? color : Palette.border,
+          borderColor: selected ? color : theme.chipBorder,
           opacity: pressed ? 0.78 : 1,
         },
         style,
       ]}
     >
-      {icon ? <AppIcon name={icon} color={selected ? color : Palette.muted} size={17} /> : null}
-      <Text style={{ color: selected ? Palette.text : Palette.muted, fontWeight: '700', fontSize: 13 }}>
+      {icon ? <AppIcon name={icon} color={selected ? color : theme.muted} size={17} /> : null}
+      <Text style={{ color: selected ? theme.text : theme.muted, fontWeight: '700', fontSize: 13 }}>
         {label}
       </Text>
     </Pressable>

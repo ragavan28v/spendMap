@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTransactionStore } from '@/store/transactionStore';
 import { TransactionRecord, TransactionType } from '@/types';
 import { formatDateLabel, startOfMonth, startOfToday, startOfWeek, startOfYear } from '@/utils/formatters';
@@ -16,6 +17,7 @@ type SortFilter = 'newest' | 'high-low';
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const transactions = useTransactionStore((state) => state.transactions);
   const [range, setRange] = useState<RangeFilter>('all');
   const [type, setType] = useState<TransactionType | 'all'>('all');
@@ -39,12 +41,12 @@ export default function HistoryScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
     >
       <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>History</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Search, filter, and expand every transaction.</Text>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>History</Text>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Search, filter, and expand every transaction.</Text>
       </View>
 
       <Card style={{ padding: 14, gap: 12 }}>
@@ -56,16 +58,34 @@ export default function HistoryScreen() {
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           <SelectionChip label="All" selected={type === 'all'} onPress={() => setType('all')} />
-          <SelectionChip label="Income" icon="arrow-down-circle-outline" color={Palette.emerald} selected={type === 'income'} onPress={() => setType('income')} />
-          <SelectionChip label="Expense" icon="arrow-up-circle-outline" color={Palette.orange} selected={type === 'expense'} onPress={() => setType('expense')} />
-          <SelectionChip label="High to low" icon="swap-vertical-outline" color={Palette.purple} selected={sort === 'high-low'} onPress={() => setSort(sort === 'high-low' ? 'newest' : 'high-low')} />
+          <SelectionChip
+            label="Income"
+            icon="arrow-down-circle-outline"
+            color={Palette.emerald}
+            selected={type === 'income'}
+            onPress={() => setType('income')}
+          />
+          <SelectionChip
+            label="Expense"
+            icon="arrow-up-circle-outline"
+            color={Palette.orange}
+            selected={type === 'expense'}
+            onPress={() => setType('expense')}
+          />
+          <SelectionChip
+            label="High to low"
+            icon="swap-vertical-outline"
+            color={Palette.purple}
+            selected={sort === 'high-low'}
+            onPress={() => setSort(sort === 'high-low' ? 'newest' : 'high-low')}
+          />
         </View>
       </Card>
 
       {groups.length ? (
         groups.map((group) => (
           <View key={group.label} style={{ gap: 10 }}>
-            <Text style={{ color: Palette.muted, fontSize: 13, fontWeight: '900' }}>{group.label}</Text>
+            <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '900' }}>{group.label}</Text>
             {group.transactions.map((transaction) => (
               <TransactionCard key={transaction.id} transaction={transaction} />
             ))}

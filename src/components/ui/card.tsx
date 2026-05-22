@@ -1,4 +1,5 @@
-import { Palette, Radius } from '@/constants/design';
+import { Radius } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import React from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
@@ -8,16 +9,18 @@ interface CardProps {
 }
 
 export function Card({ children, style }: CardProps) {
+  const theme = useAppTheme();
+
   return (
     <View
       style={[
         {
-          backgroundColor: Palette.surfaceGlass,
+          backgroundColor: theme.surfaceGlass,
           borderRadius: Radius.lg,
           borderCurve: 'continuous',
           borderWidth: 1,
-          borderColor: Palette.border,
-          boxShadow: '0 18px 40px rgba(0, 0, 0, 0.18)',
+          borderColor: theme.border,
+          boxShadow: theme.cardShadow,
         },
         style,
       ]}

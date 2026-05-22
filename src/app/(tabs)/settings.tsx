@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { signOutUser } from '@/services/firebase/auth';
 import { clearPersistedState } from '@/services/persistence';
 import { useCategoryStore } from '@/store/categoryStore';
@@ -27,6 +29,7 @@ const walletPresets: { type: WalletType; name: string; icon: string; color: stri
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const profile = useUserStore((state) => state.profile);
   const settings = useUserStore((state) => state.settings);
   const setSettings = useUserStore((state) => state.setSettings);
@@ -80,39 +83,52 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
     >
-      <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Settings</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Profile, wallets, security, and sync.</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ gap: 6, flex: 1 }}>
+          <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Settings</Text>
+          <Text style={{ color: theme.muted, fontSize: 13 }}>Profile, wallets, security, and sync.</Text>
+        </View>
+        <ThemeToggleButton />
       </View>
 
       <Card style={{ padding: 16, gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <AppIcon name="person-outline" color={Palette.blue} backgroundColor="rgba(59, 130, 246, 0.18)" size={24} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: Palette.text, fontSize: 17, fontWeight: '900' }}>{profile?.name ?? 'Guest'}</Text>
-            <Text style={{ color: Palette.muted, fontSize: 12 }}>{profile?.email ?? 'Sign in to sync data'}</Text>
+            <Text style={{ color: theme.text, fontSize: 17, fontWeight: '900' }}>{profile?.name ?? 'Guest'}</Text>
+            <Text style={{ color: theme.muted, fontSize: 12 }}>{profile?.email ?? 'Sign in to sync data'}</Text>
           </View>
         </View>
       </Card>
 
       <Card style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: Palette.text, fontSize: 18, fontWeight: '900' }}>Security</Text>
-        <SettingSwitch label="PIN lock" value={settings.appLockEnabled} onValueChange={(value) => setSettings({ appLockEnabled: value })} />
-        <SettingSwitch label="Fingerprint" value={settings.biometricEnabled} onValueChange={(value) => setSettings({ biometricEnabled: value })} />
-        <SettingSwitch label="Notifications" value={settings.notificationsEnabled} onValueChange={(value) => setSettings({ notificationsEnabled: value })} />
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Security</Text>
+        <SettingSwitch label="PIN lock" value={settings.appLockEnabled} onValueChange={(value) => setSettings({ appLockEnabled: value })} theme={theme} />
+        <SettingSwitch
+          label="Fingerprint"
+          value={settings.biometricEnabled}
+          onValueChange={(value) => setSettings({ biometricEnabled: value })}
+          theme={theme}
+        />
+        <SettingSwitch
+          label="Notifications"
+          value={settings.notificationsEnabled}
+          onValueChange={(value) => setSettings({ notificationsEnabled: value })}
+          theme={theme}
+        />
       </Card>
 
       <Card style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: Palette.text, fontSize: 18, fontWeight: '900' }}>Wallet management</Text>
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Wallet management</Text>
         {wallets.map((wallet) => (
           <View key={wallet.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <AppIcon name={wallet.icon} color={wallet.color} backgroundColor={`${wallet.color}20`} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: Palette.text, fontWeight: '800' }}>{wallet.name}</Text>
-              <Text style={{ color: Palette.muted, fontSize: 12 }}>{formatCurrency(wallet.balance)}</Text>
+              <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
+              <Text style={{ color: theme.muted, fontSize: 12 }}>{formatCurrency(wallet.balance)}</Text>
             </View>
             <Switch value={wallet.isEnabled} onValueChange={() => toggleWallet(wallet.id)} />
           </View>
@@ -120,7 +136,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Card style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: Palette.text, fontSize: 18, fontWeight: '900' }}>Create wallet</Text>
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Create wallet</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {walletPresets.map((item) => (
             <SelectionChip
@@ -151,14 +167,16 @@ function SettingSwitch({
   label,
   value,
   onValueChange,
+  theme,
 }: {
   label: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
+  theme: ReturnType<typeof useAppTheme>;
 }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Text style={{ color: Palette.text, fontSize: 15, fontWeight: '800' }}>{label}</Text>
+      <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>{label}</Text>
       <Switch value={value} onValueChange={onValueChange} />
     </View>
   );

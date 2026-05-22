@@ -3,6 +3,7 @@ import { MetricCard } from '@/components/ui/metric-card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTransactionSummary } from '@/hooks/useTransactions';
 import { useWallets } from '@/hooks/useWallet';
 import { useTransactionStore } from '@/store/transactionStore';
@@ -15,6 +16,7 @@ type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export default function AnalyticsScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const [period, setPeriod] = useState<Period>('monthly');
   const transactions = useTransactionStore((state) => state.transactions);
   const { walletStats } = useWallets();
@@ -50,12 +52,12 @@ export default function AnalyticsScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
     >
       <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Insights</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Readable analytics without dashboard clutter.</Text>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Insights</Text>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Readable analytics without dashboard clutter.</Text>
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -77,34 +79,39 @@ export default function AnalyticsScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <MetricCard label="Net flow" value={formatCurrency(analytics.net)} icon="pulse-outline" color={analytics.net >= 0 ? Palette.emerald : Palette.red} />
+        <MetricCard
+          label="Net flow"
+          value={formatCurrency(analytics.net)}
+          icon="pulse-outline"
+          color={analytics.net >= 0 ? Palette.emerald : Palette.red}
+        />
         <MetricCard label="Top category" value={summary.highestCategory} icon="pricetag-outline" color={Palette.blue} />
       </View>
 
       <Card style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: Palette.text, fontSize: 18, fontWeight: '900' }}>Category breakdown</Text>
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Category breakdown</Text>
         {analytics.categoryBreakdown.length ? (
           analytics.categoryBreakdown.map((item) => (
             <View key={item.name} style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={{ color: Palette.text, fontWeight: '800' }}>{item.name}</Text>
-                <Text style={{ color: Palette.muted, fontWeight: '800' }}>{formatCurrency(item.amount)}</Text>
+                <Text style={{ color: theme.text, fontWeight: '800' }}>{item.name}</Text>
+                <Text style={{ color: theme.muted, fontWeight: '800' }}>{formatCurrency(item.amount)}</Text>
               </View>
               <ProgressBar value={item.amount / maxCategory} color={item.color} height={10} />
             </View>
           ))
         ) : (
-          <Text style={{ color: Palette.muted }}>No expenses in this period.</Text>
+          <Text style={{ color: theme.muted }}>No expenses in this period.</Text>
         )}
       </Card>
 
       <Card style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: Palette.text, fontSize: 18, fontWeight: '900' }}>Wallet usage</Text>
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Wallet usage</Text>
         {walletStats.map((wallet) => (
           <View key={wallet.id} style={{ gap: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: Palette.text, fontWeight: '800' }}>{wallet.name}</Text>
-              <Text style={{ color: Palette.muted, fontWeight: '800' }}>{formatCurrency(wallet.balance)}</Text>
+              <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
+              <Text style={{ color: theme.muted, fontWeight: '800' }}>{formatCurrency(wallet.balance)}</Text>
             </View>
             <ProgressBar value={wallet.balance / maxWallet} color={wallet.color} height={10} />
           </View>

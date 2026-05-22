@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { IncomeSourceId, incomeSources } from '@/constants/income-sources';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
 import { saveTransactionWithWallet } from '@/services/firebase/firestore';
@@ -19,6 +20,7 @@ const recurringOptions: RecurringType[] = ['none', 'daily', 'weekly', 'monthly']
 
 export default function AddIncomeScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const wallets = useWalletStore((state) => state.wallets.filter((wallet) => wallet.isEnabled));
   const totalBalance = useWalletStore((state) => state.totalBalance)();
   const [amount, setAmount] = useState('');
@@ -26,9 +28,7 @@ export default function AddIncomeScreen() {
   const [note, setNote] = useState('');
   const [walletId, setWalletId] = useState(wallets[0]?.id ?? '');
   const [sourceId, setSourceId] = useState<IncomeSourceId>(incomeSources[0].id);
-  const [recurringType, setRecurringType] = useState<RecurringType>(
-    incomeSources[0].defaultRecurringType
-  );
+  const [recurringType, setRecurringType] = useState<RecurringType>(incomeSources[0].defaultRecurringType);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -82,12 +82,12 @@ export default function AddIncomeScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 16 }}
     >
       <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Add income</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Add only to the selected wallet.</Text>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Add income</Text>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Add only to the selected wallet.</Text>
       </View>
 
       <Card style={{ padding: 16, gap: 16 }}>
@@ -108,7 +108,7 @@ export default function AddIncomeScreen() {
         />
       </Card>
 
-      <PickerSection title="Wallet to credit">
+      <PickerSection title="Wallet to credit" theme={theme}>
         {wallets.map((wallet) => (
           <SelectionChip
             key={wallet.id}
@@ -121,7 +121,7 @@ export default function AddIncomeScreen() {
         ))}
       </PickerSection>
 
-      <PickerSection title="Income source">
+      <PickerSection title="Income source" theme={theme}>
         {incomeSources.map((source) => (
           <SelectionChip
             key={source.id}
@@ -140,6 +140,7 @@ export default function AddIncomeScreen() {
       <PickerSection
         title={recurringType === 'none' ? 'Repeat schedule' : `Repeats ${recurringType}`}
         helperText="Recurring items are stored with a schedule flag for upcoming automation."
+        theme={theme}
       >
         {recurringOptions.map((option) => (
           <SelectionChip
@@ -168,15 +169,17 @@ function PickerSection({
   title,
   helperText,
   children,
+  theme,
 }: {
   title: string;
   helperText?: string;
   children: React.ReactNode;
+  theme: ReturnType<typeof useAppTheme>;
 }) {
   return (
     <Card style={{ padding: 16, gap: 12 }}>
-      <Text style={{ color: Palette.text, fontSize: 16, fontWeight: '900' }}>{title}</Text>
-      {helperText ? <Text style={{ color: Palette.muted, fontSize: 12 }}>{helperText}</Text> : null}
+      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{title}</Text>
+      {helperText ? <Text style={{ color: theme.muted, fontSize: 12 }}>{helperText}</Text> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{children}</View>
     </Card>
   );

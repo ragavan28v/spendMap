@@ -1,6 +1,7 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { Card } from '@/components/ui/card';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { TransactionRecord } from '@/types';
 import { formatCurrency, formatTime } from '@/utils/formatters';
 import React, { useState } from 'react';
@@ -12,6 +13,7 @@ interface TransactionCardProps {
 
 export function TransactionCard({ transaction }: TransactionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const theme = useAppTheme();
   const isIncome = transaction.type === 'income';
   const accent = isIncome ? Palette.emerald : Palette.orange;
 
@@ -26,10 +28,10 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
             size={22}
           />
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ color: Palette.text, fontSize: 15, fontWeight: '800' }}>
+            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
               {transaction.reason || transaction.categoryName}
             </Text>
-            <Text style={{ color: Palette.muted, fontSize: 12 }}>
+            <Text style={{ color: theme.muted, fontSize: 12 }}>
               {transaction.categoryName} • {formatTime(transaction.timestamp)}
             </Text>
           </View>
@@ -47,7 +49,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         </View>
 
         {expanded ? (
-          <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: Palette.border, paddingTop: 12 }}>
+          <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }}>
             <Detail label="Wallet" value={transaction.walletName} />
             <Detail label="Wallet balance after" value={formatCurrency(transaction.walletBalanceAfter)} />
             <Detail label="Total balance after" value={formatCurrency(transaction.balanceAfterTransaction)} />
@@ -61,10 +63,12 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
+  const theme = useAppTheme();
+
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16 }}>
-      <Text style={{ color: Palette.muted, fontSize: 12 }}>{label}</Text>
-      <Text style={{ color: Palette.text, fontSize: 12, fontWeight: '700', flex: 1, textAlign: 'right' }}>
+      <Text style={{ color: theme.muted, fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: theme.text, fontSize: 12, fontWeight: '700', flex: 1, textAlign: 'right' }}>
         {value}
       </Text>
     </View>

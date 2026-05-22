@@ -1,4 +1,5 @@
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import React from 'react';
 import { DimensionValue, View } from 'react-native';
 
@@ -9,6 +10,7 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ value, color = Palette.blue, height = 8 }: ProgressBarProps) {
+  const theme = useAppTheme();
   const width = `${Math.max(0, Math.min(100, value * 100))}%` as DimensionValue;
 
   return (
@@ -17,7 +19,7 @@ export function ProgressBar({ value, color = Palette.blue, height = 8 }: Progres
         height,
         borderRadius: height,
         overflow: 'hidden',
-        backgroundColor: 'rgba(148, 163, 184, 0.16)',
+        backgroundColor: theme.trackBackground,
       }}
     >
       <View

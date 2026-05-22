@@ -14,7 +14,7 @@ export interface UserState {
 }
 
 const initialSettings: UserSettings = {
-  theme: 'dark',
+  theme: 'system',
   currency: 'INR',
   appLockEnabled: false,
   biometricEnabled: false,

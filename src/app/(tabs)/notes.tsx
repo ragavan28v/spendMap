@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useNoteStore } from '@/store/noteStore';
 import { NoteItem } from '@/types';
 import { formatDateLabel } from '@/utils/formatters';
@@ -16,6 +17,7 @@ type NoteType = NoteItem['type'];
 
 export default function NotesScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useAppTheme();
   const notes = useNoteStore((state) => state.notes);
   const upsertNote = useNoteStore((state) => state.upsertNote);
   const togglePinned = useNoteStore((state) => state.togglePinned);
@@ -43,12 +45,12 @@ export default function NotesScreen() {
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      style={{ flex: 1, backgroundColor: Palette.navy }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
     >
       <View style={{ gap: 6 }}>
-        <Text style={{ color: Palette.text, fontSize: 28, fontWeight: '900' }}>Money notes</Text>
-        <Text style={{ color: Palette.muted, fontSize: 13 }}>Goals, reminders, budgets, and quick ideas.</Text>
+        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Money notes</Text>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Goals, reminders, budgets, and quick ideas.</Text>
       </View>
 
       <Card style={{ padding: 16, gap: 14 }}>
@@ -78,16 +80,21 @@ export default function NotesScreen() {
 
       {notes.length ? (
         notes.map((note) => (
-          <Card key={note.id} style={{ padding: 16, gap: 10, borderColor: note.pinned ? `${Palette.purple}70` : Palette.border }}>
+          <Card
+            key={note.id}
+            style={{ padding: 16, gap: 10, borderColor: note.pinned ? `${Palette.purple}70` : undefined }}
+          >
             <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
               <AppIcon name={noteIcon(note.type)} color={Palette.purple} backgroundColor="rgba(139, 92, 246, 0.18)" />
               <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ color: Palette.text, fontSize: 16, fontWeight: '900' }}>{note.title}</Text>
-                <Text style={{ color: Palette.muted, fontSize: 13, lineHeight: 19 }}>{note.content}</Text>
-                <Text style={{ color: Palette.slate, fontSize: 11 }}>{formatDateLabel(note.updatedAt)} • {note.type}</Text>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{note.title}</Text>
+                <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 19 }}>{note.content}</Text>
+                <Text style={{ color: theme.subtle, fontSize: 11 }}>
+                  {formatDateLabel(note.updatedAt)} • {note.type}
+                </Text>
               </View>
               <Pressable onPress={() => togglePinned(note.id)}>
-                <AppIcon name={note.pinned ? 'pin' : 'pin-outline'} color={note.pinned ? Palette.purple : Palette.muted} />
+                <AppIcon name={note.pinned ? 'pin' : 'pin-outline'} color={note.pinned ? Palette.purple : theme.muted} />
               </Pressable>
             </View>
           </Card>

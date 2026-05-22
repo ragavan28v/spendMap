@@ -1,5 +1,6 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { Palette, Radius } from '@/constants/design';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import React from 'react';
 import { Pressable, Text, ViewStyle } from 'react-native';
 
@@ -12,6 +13,8 @@ interface ButtonProps {
 }
 
 export function Button({ label, onPress, secondary, icon, style }: ButtonProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -25,9 +28,9 @@ export function Button({ label, onPress, secondary, icon, style }: ButtonProps) 
           justifyContent: 'center',
           flexDirection: 'row',
           gap: 8,
-          backgroundColor: secondary ? 'rgba(15, 23, 42, 0.52)' : Palette.blue,
+          backgroundColor: secondary ? theme.buttonSecondaryBackground : Palette.blue,
           borderWidth: 1,
-          borderColor: secondary ? Palette.border : 'rgba(255, 255, 255, 0.16)',
+          borderColor: secondary ? theme.border : 'rgba(255, 255, 255, 0.16)',
           opacity: pressed ? 0.82 : 1,
         },
         style,

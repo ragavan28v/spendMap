@@ -1,15 +1,16 @@
-import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { signInWithGoogle } from '@/services/firebase/auth';
 import { useUserStore } from '@/store/userStore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function LoginScreen() {
+  const theme = useAppTheme();
   const manifest = Constants.expoConfig ?? Constants.manifest;
   const extra = (manifest as { extra?: Record<string, string> })?.extra ?? null;
 
@@ -71,27 +72,19 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
         <Card style={styles.card}>
-          <ThemedText type="title">Welcome to SpendWise</ThemedText>
-          <ThemedText type="small">Secure personal finance tracking with split wallets.</ThemedText>
-          <Button
-            label="Sign in with Google"
-            onPress={handleGoogleSignIn}
-          />
+          <Text style={[styles.title, { color: theme.text }]}>Welcome to SpendWise</Text>
+          <Text style={[styles.body, { color: theme.muted }]}>Secure personal finance tracking with split wallets.</Text>
+          <Button label="Sign in with Google" onPress={handleGoogleSignIn} />
           {!googleWebClientId && (
-            <ThemedText type="small">
-              Google sign-in isn&apos;t configured yet. Make sure your Expo env vars are set and
-              app.config.js is loaded.
-            </ThemedText>
+            <Text style={[styles.body, { color: theme.muted }]}>
+              Google sign-in isn&apos;t configured yet. Make sure your Expo env vars are set and app.config.js is loaded.
+            </Text>
           )}
-          {error ? <ThemedText type="small">{error}</ThemedText> : null}
-          <Button
-            label="Continue without signing in"
-            onPress={() => router.replace('/dashboard')}
-            secondary
-          />
+          {error ? <Text style={[styles.body, { color: theme.warning }]}>{error}</Text> : null}
+          <Button label="Continue without signing in" onPress={() => router.replace('/dashboard')} secondary />
         </Card>
       </View>
     </SafeAreaView>
@@ -101,7 +94,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
     justifyContent: 'center',
   },
   content: {
@@ -110,5 +102,13 @@ const styles = StyleSheet.create({
   card: {
     padding: 24,
     gap: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
