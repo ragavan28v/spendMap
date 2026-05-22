@@ -15,6 +15,7 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WalletCard } from '@/components/wallet/wallet-card';
+import { useUserStore } from '@/store/userStore';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function DashboardScreen() {
   const { totalBalance, walletStats } = useWallets();
   const recentTransactions = useRecentTransactions();
   const summary = useTransactionSummary();
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
   return (
     <ScrollView
@@ -34,6 +36,22 @@ export default function DashboardScreen() {
         <View>
           <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '700' }}>SpendMap</Text>
           <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Money cockpit</Text>
+          {!isAuthenticated ? (
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                marginTop: 8,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: theme.notificationBackground,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>Guest mode</Text>
+            </View>
+          ) : null}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <AppIcon

@@ -1,56 +1,91 @@
-# Welcome to your Expo app 👋
+# SpendMap
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SpendMap is an Expo app for tracking wallets, transactions, notes, analytics, and reports.
 
-## Get started
+## Local setup
 
-1. Install dependencies
+1. Install the app dependencies:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Install the monthly-report runner dependencies:
+
+   ```bash
+   cd functions
+   npm install
+   cd ..
+   ```
+
+3. Start the app:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## Monthly report system
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+The report system now has two paths:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **Automatic monthly reports** run from GitHub Actions using `.github/workflows/monthly-reports.yml`
+- **Manual report exports** are available in the `History` tab under **Generate report**
 
-## Get a fresh project
+You can export:
 
-When you're ready, run:
+- PDF
+- Excel
 
-```bash
-npm run reset-project
-```
+You can also choose:
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- Today
+- Week
+- Month
+- Year
+- All time
+- Custom date range
 
-### Other setup steps
+For custom range exports, enter dates in `YYYY-MM-DD` format.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Required setup
+
+To make automated email reports work, add these GitHub repository secrets:
+
+- `FIREBASE_SERVICE_ACCOUNT_JSON` — full Firebase service account JSON
+- `REPORTS_GMAIL_USER` — Gmail address used to send reports
+- `REPORTS_GMAIL_APP_PASSWORD` — Gmail app password for SMTP
+- `REPORTS_FROM_EMAIL` — optional sender override
+
+Optional:
+
+- `REPORTS_TIME_ZONE` — defaults to `Asia/Kolkata` in the workflow
+
+### Firebase service account
+
+Create a service account in Google Cloud / Firebase with Firestore read and write access, then store the full JSON in the `FIREBASE_SERVICE_ACCOUNT_JSON` secret.
+
+### Gmail setup
+
+Use a Gmail account with 2-step verification enabled and create an app password for SMTP. Normal Gmail passwords will not work for this workflow.
+
+## Cost notes
+
+- GitHub Actions is free for public repositories.
+- Private repositories use the included Actions minutes from your GitHub plan.
+- If you need true zero-cost automation for a private repo, use a self-hosted runner.
+
+## Manual report export
+
+Open the `History` tab, then:
+
+1. Pick a report scope.
+2. Optionally enter a custom date range.
+3. Tap `PDF` or `Excel`.
+4. Share or save the generated file from the device share sheet.
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
+- [Expo docs](https://docs.expo.dev/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [GitHub Actions schedule syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax-for-github-actions)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

@@ -1,4 +1,5 @@
 import { TransactionCard } from '@/components/transaction/transaction-card';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTransactionStore } from '@/store/transactionStore';
 import { TransactionRecord, TransactionType } from '@/types';
 import { formatDateLabel, startOfMonth, startOfToday, startOfWeek, startOfYear } from '@/utils/formatters';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,9 +18,11 @@ type RangeFilter = 'all' | 'today' | 'week' | 'month' | 'year';
 type SortFilter = 'newest' | 'high-low';
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const transactions = useTransactionStore((state) => state.transactions);
+
   const [range, setRange] = useState<RangeFilter>('all');
   const [type, setType] = useState<TransactionType | 'all'>('all');
   const [sort, setSort] = useState<SortFilter>('newest');
@@ -44,12 +48,22 @@ export default function HistoryScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
     >
-      <View style={{ gap: 6 }}>
-        <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>History</Text>
-        <Text style={{ color: theme.muted, fontSize: 13 }}>Search, filter, and expand every transaction.</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ gap: 6, flex: 1 }}>
+          <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>History</Text>
+          <Text style={{ color: theme.muted, fontSize: 13 }}>Search, filter, and expand every transaction.</Text>
+        </View>
+        <Button
+          label="Generate report"
+          icon="document-text-outline"
+          onPress={() => router.push('/report')}
+          secondary
+          style={{ paddingHorizontal: 14, paddingVertical: 10 }}
+        />
       </View>
 
       <Card style={{ padding: 14, gap: 12 }}>
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Quick filters</Text>
         <Input label="Search" value={search} onChangeText={setSearch} placeholder="Food, GPay, salary..." />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {(['all', 'today', 'week', 'month', 'year'] as RangeFilter[]).map((option) => (

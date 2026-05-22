@@ -1,0 +1,79 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [ 6 0 R 7 0 R ] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 177 >>
+stream
+BT /F1 20 Tf 40 800 Td (Monthly report - May 2026) Tj ET
+BT /F1 11 Tf 40 772 Td (User: Test) Tj ET
+BT /F1 11 Tf 40 754 Td (Income: INR 100   Expense: INR 20   Net: INR 80) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Length 1207 >>
+stream
+BT /F1 18 Tf 40 800 Td (Transactions - page 1) Tj ET
+BT /F1 10 Tf 40 782 Td (Table view keeps every field aligned while wrapping long text inside each cell.) Tj ET
+40 740 64 18 re S
+BT /F1 9 Tf 44 752 Td (Date) Tj ET
+104 740 42 18 re S
+BT /F1 9 Tf 108 752 Td (Type) Tj ET
+146 740 66 18 re S
+BT /F1 9 Tf 150 752 Td (Amount) Tj ET
+212 740 66 18 re S
+BT /F1 9 Tf 216 752 Td (Wallet) Tj ET
+278 740 78 18 re S
+BT /F1 9 Tf 282 752 Td (Category) Tj ET
+356 740 129 18 re S
+BT /F1 9 Tf 360 752 Td (Reason) Tj ET
+485 740 70 18 re S
+BT /F1 9 Tf 489 752 Td (Note) Tj ET
+40 658 64 62 re S
+BT /F1 8 Tf 44 707 Td (22/5/2026) Tj ET
+104 658 42 62 re S
+BT /F1 8 Tf 108 707 Td (expense) Tj ET
+146 658 66 62 re S
+BT /F1 8.2 Tf 208 707 Td (-INR 20) Tj ET
+212 658 66 62 re S
+BT /F1 8 Tf 216 707 Td (Cash) Tj ET
+278 658 78 62 re S
+BT /F1 8 Tf 282 707 Td (Food) Tj ET
+356 658 129 62 re S
+BT /F1 8 Tf 360 707 Td (Lunch with colleagues and) Tj ET
+BT /F1 8 Tf 360 696 Td (extra snacks that used to) Tj ET
+BT /F1 8 Tf 360 685 Td (overflow) Tj ET
+485 658 70 62 re S
+BT /F1 8 Tf 489 707 Td (Long note to) Tj ET
+BT /F1 8 Tf 489 696 Td (test wrapping) Tj ET
+BT /F1 8 Tf 489 685 Td (in the table) Tj ET
+BT /F1 8 Tf 489 674 Td (layout) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000123 00000 n 
+0000000193 00000 n 
+0000000421 00000 n 
+0000001680 00000 n 
+0000001806 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+1932
+%%EOF
