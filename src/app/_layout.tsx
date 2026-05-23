@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation/native';
 import { Redirect, Slot, usePathname } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { User } from 'firebase/auth';
@@ -65,6 +65,7 @@ export default function RootLayout() {
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
+  const wasBackgroundedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -144,8 +145,10 @@ export default function RootLayout() {
         if (settings.appLockEnabled) {
           void setAppLockBackgroundAt(Date.now());
         }
-      } else if (nextState === 'active') {
+        wasBackgroundedRef.current = true;
+      } else if (nextState === 'active' && wasBackgroundedRef.current) {
         void clearAppLockBackgroundAt();
+        wasBackgroundedRef.current = false;
       }
     });
 
@@ -384,6 +387,7 @@ export default function RootLayout() {
           <AppLockScreen
             onUnlock={async () => {
               await clearAppLockBackgroundAt();
+              wasBackgroundedRef.current = false;
               setIsLocked(false);
             }}
           />
