@@ -1,6 +1,5 @@
 import { defaultWallets, mergeWithDefaultWallets } from '@/constants/wallets';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { persistSelectedWalletId, persistWallets } from '@/services/persistence';
 import { saveOrQueueWallet } from '@/services/sync/offlineQueue';
 import { useUserStore } from '@/store/userStore';
 import { TransactionRecord, Wallet } from '@/types';
@@ -35,8 +34,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         wallets: mergedWallets,
         selectedWalletId,
       }));
-      persistWallets(mergedWallets);
-      persistSelectedWalletId(selectedWalletId);
     },
 
     resetWallets: () => {
@@ -44,8 +41,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         wallets: defaultWallets,
         selectedWalletId: defaultWallets[0].id,
       }));
-      persistWallets(defaultWallets);
-      persistSelectedWalletId(defaultWallets[0].id);
     },
 
     selectWallet: (walletId) => {
@@ -53,7 +48,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         const selected = state.wallets.some((wallet: Wallet) => wallet.id === walletId)
           ? walletId
           : state.selectedWalletId;
-        persistSelectedWalletId(selected);
         return {
           ...state,
           selectedWalletId: selected,
@@ -66,7 +60,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         const wallets = state.wallets.map((wallet: Wallet) =>
           wallet.id === walletId ? { ...wallet, balance: wallet.balance + amount } : wallet
         );
-        persistWallets(wallets);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
           const wallet = wallets.find((item) => item.id === walletId);
@@ -87,7 +80,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         const wallets = exists
           ? state.wallets.map((item: Wallet) => (item.id === wallet.id ? wallet : item))
           : [...state.wallets, wallet];
-        persistWallets(wallets);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
           saveOrQueueWallet(userId, wallet);
@@ -104,7 +96,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         const wallets = state.wallets.map((wallet: Wallet) =>
           wallet.id === walletId ? { ...wallet, isEnabled: !wallet.isEnabled } : wallet
         );
-        persistWallets(wallets);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         const wallet = wallets.find((item) => item.id === walletId);
         if (userId && wallet) {
@@ -124,7 +115,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
             ? { ...wallet, balance: transaction.walletBalanceAfter }
             : wallet
         );
-        persistWallets(wallets);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
           const wallet = wallets.find((item) => item.id === transaction.walletId);
@@ -146,7 +136,6 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
             ? { ...wallet, balance: transaction.walletBalanceAfter }
             : wallet
         );
-        persistWallets(wallets);
         return {
           ...state,
           wallets,

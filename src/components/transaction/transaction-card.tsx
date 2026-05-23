@@ -1,4 +1,5 @@
 import { AppIcon } from '@/components/ui/app-icon';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -9,9 +10,11 @@ import { Pressable, Text, View } from 'react-native';
 
 interface TransactionCardProps {
   transaction: TransactionRecord;
+  onEdit?: (transaction: TransactionRecord) => void;
+  onDelete?: (transaction: TransactionRecord) => void;
 }
 
-export function TransactionCard({ transaction }: TransactionCardProps) {
+export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const theme = useAppTheme();
   const isIncome = transaction.type === 'income';
@@ -55,6 +58,23 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
             <Detail label="Total balance after" value={formatCurrency(transaction.balanceAfterTransaction)} />
             <Detail label="Recurring" value={transaction.isRecurring ? transaction.recurringType ?? 'Yes' : 'No'} />
             {transaction.note ? <Detail label="Note" value={transaction.note} /> : null}
+            {onEdit || onDelete ? (
+              <View style={{ flexDirection: 'row', gap: 10, paddingTop: 4 }}>
+                {onEdit ? (
+                  <Button label="Edit" icon="create-outline" secondary compact style={{ flex: 1 }} onPress={() => onEdit(transaction)} />
+                ) : null}
+                {onDelete ? (
+                  <Button
+                    label="Delete"
+                    icon="trash-outline"
+                    secondary
+                    compact
+                    style={{ flex: 1 }}
+                    onPress={() => onDelete(transaction)}
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </Card>

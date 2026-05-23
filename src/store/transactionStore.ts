@@ -1,5 +1,4 @@
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { persistTransactions } from '@/services/persistence';
 import { saveOrQueueTransaction } from '@/services/sync/offlineQueue';
 import { useUserStore } from '@/store/userStore';
 import { TransactionRecord } from '@/types';
@@ -9,6 +8,8 @@ export interface TransactionState {
   transactions: TransactionRecord[];
   addTransaction: (transaction: TransactionRecord) => void;
   addTransactionLocal: (transaction: TransactionRecord) => void;
+  updateTransactionLocal: (transaction: TransactionRecord) => void;
+  removeTransactionLocal: (transactionId: string) => void;
   setTransactions: (transactions: TransactionRecord[]) => void;
   getRecentTransactions: () => TransactionRecord[];
   getTransactionsByFilter: (filter: {
@@ -26,7 +27,6 @@ export const useTransactionStore = create<TransactionState>()((set, get) => ({
     addTransaction: (transaction) => {
       set((state) => {
         const transactions = [transaction, ...state.transactions];
-        persistTransactions(transactions);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
           saveOrQueueTransaction(userId, transaction);
@@ -41,7 +41,28 @@ export const useTransactionStore = create<TransactionState>()((set, get) => ({
     addTransactionLocal: (transaction) => {
       set((state) => {
         const transactions = [transaction, ...state.transactions];
-        persistTransactions(transactions);
+        return {
+          ...state,
+          transactions,
+        };
+      });
+    },
+
+    updateTransactionLocal: (transaction) => {
+      set((state) => {
+        const transactions = state.transactions
+          .map((item) => (item.id === transaction.id ? transaction : item))
+          .sort((first, second) => second.timestamp - first.timestamp);
+        return {
+          ...state,
+          transactions,
+        };
+      });
+    },
+
+    removeTransactionLocal: (transactionId) => {
+      set((state) => {
+        const transactions = state.transactions.filter((item) => item.id !== transactionId);
         return {
           ...state,
           transactions,
@@ -51,7 +72,6 @@ export const useTransactionStore = create<TransactionState>()((set, get) => ({
 
     setTransactions: (transactions) => {
       set((state) => {
-        persistTransactions(transactions);
         return {
           ...state,
           transactions,

@@ -1,6 +1,6 @@
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { persistSettings, persistUserProfile } from '@/services/persistence';
 import { saveOrQueueSettings } from '@/services/sync/offlineQueue';
+import { saveStoredThemePreference } from '@/services/theme-preference';
 import { UserProfile, UserSettings } from '@/types';
 import { create } from 'zustand';
 
@@ -17,7 +17,6 @@ const initialSettings: UserSettings = {
   theme: 'system',
   currency: 'INR',
   appLockEnabled: false,
-  biometricEnabled: false,
   notificationsEnabled: true,
 };
 
@@ -25,45 +24,35 @@ export const useUserStore = create<UserState>((set) => ({
   profile: null,
   settings: initialSettings,
   isAuthenticated: false,
-
-    setProfile: (profile) => {
-      set((state) => {
-        persistUserProfile(profile);
-        return {
-          ...state,
-          profile,
-          isAuthenticated: true,
-        };
-      });
-    },
-
-    clearProfile: () => {
-      set((state) => {
-        persistUserProfile(null);
-        return {
-          ...state,
-          profile: null,
-          isAuthenticated: false,
-        };
-      });
-    },
-
-    setSettings: (settings) => {
-      set((state) => {
-        const nextSettings = {
-          ...state.settings,
-          ...settings,
-        };
-        persistSettings(nextSettings);
-        const userId = state.profile?.uid ?? getCurrentFirebaseUserId();
-        if (userId) {
-          saveOrQueueSettings(userId, nextSettings);
-        }
-        return {
-          ...state,
-          settings: nextSettings,
-        };
-      });
-    },
-  }));
+  setProfile: (profile) => {
+    set(() => ({
+      profile,
+      isAuthenticated: true,
+    }));
+  },
+  clearProfile: () => {
+    set(() => ({
+      profile: null,
+      isAuthenticated: false,
+    }));
+  },
+  setSettings: (settings) => {
+    set((state) => {
+      const nextSettings = {
+        ...state.settings,
+        ...settings,
+      };
+      if (settings.theme) {
+        void saveStoredThemePreference(settings.theme);
+      }
+      const userId = state.profile?.uid ?? getCurrentFirebaseUserId();
+      if (userId) {
+        void saveOrQueueSettings(userId, nextSettings);
+      }
+      return {
+        settings: nextSettings,
+      };
+    });
+  },
+}));
 

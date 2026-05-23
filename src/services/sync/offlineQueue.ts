@@ -1,12 +1,14 @@
 import {
+  deleteNotification,
   saveCategory,
+  saveNotification,
   saveNote,
   saveTransaction,
   saveUserProfile,
   saveUserSettings,
   saveWallet,
 } from '@/services/firebase/firestore';
-import { Category, NoteItem, TransactionRecord, UserProfile, UserSettings, Wallet } from '@/types';
+import { AppNotificationItem, Category, NoteItem, TransactionRecord, UserProfile, UserSettings, Wallet } from '@/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const QUEUE_KEY = '@spendwise:syncQueue';
@@ -47,6 +49,13 @@ type QueueItem =
       id: 'profile';
       payload: UserProfile;
       createdAt: number;
+    }
+  | {
+      type: 'notification';
+      action: 'save' | 'delete';
+      id: string;
+      payload: AppNotificationItem;
+      createdAt: number;
     };
 
 async function readQueue(): Promise<QueueItem[]> {
@@ -60,10 +69,16 @@ async function writeQueue(queue: QueueItem[]) {
 
 export async function enqueueSyncAction(item: QueueItem) {
   const queue = await readQueue();
-  const withoutDuplicate = queue.filter(
-    (queuedItem) => !(queuedItem.type === item.type && queuedItem.id === item.id)
-  );
+  const withoutDuplicate = queue.filter((queuedItem) => getQueueItemKey(queuedItem) !== getQueueItemKey(item));
   await writeQueue([...withoutDuplicate, item]);
+}
+
+function getQueueItemKey(item: QueueItem) {
+  if (item.type === 'notification') {
+    return `${item.type}:${item.action}:${item.id}`;
+  }
+
+  return `${item.type}:${item.id}`;
 }
 
 export async function flushSyncQueue(userId: string) {
@@ -94,7 +109,7 @@ export async function saveOrQueueTransaction(userId: string, transaction: Transa
     await saveTransaction(userId, transaction);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Transaction saved locally and queued for sync.', error);
+    console.warn('Transaction queued for sync.', error);
     await enqueueSyncAction({
       type: 'transaction',
       id: transaction.id,
@@ -109,7 +124,7 @@ export async function saveOrQueueWallet(userId: string, wallet: Wallet) {
     await saveWallet(userId, wallet);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Wallet saved locally and queued for sync.', error);
+    console.warn('Wallet queued for sync.', error);
     await enqueueSyncAction({
       type: 'wallet',
       id: wallet.id,
@@ -124,7 +139,7 @@ export async function saveOrQueueCategory(userId: string, category: Category) {
     await saveCategory(userId, category);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Category saved locally and queued for sync.', error);
+    console.warn('Category queued for sync.', error);
     await enqueueSyncAction({
       type: 'category',
       id: category.id,
@@ -139,7 +154,7 @@ export async function saveOrQueueNote(userId: string, note: NoteItem) {
     await saveNote(userId, note);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Note saved locally and queued for sync.', error);
+    console.warn('Note queued for sync.', error);
     await enqueueSyncAction({
       type: 'note',
       id: note.id,
@@ -154,7 +169,7 @@ export async function saveOrQueueSettings(userId: string, settings: UserSettings
     await saveUserSettings(userId, settings);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Settings saved locally and queued for sync.', error);
+    console.warn('Settings queued for sync.', error);
     await enqueueSyncAction({
       type: 'settings',
       id: 'settings',
@@ -169,7 +184,7 @@ export async function saveOrQueueProfile(userId: string, profile: UserProfile) {
     await saveUserProfile(userId, profile);
     await flushSyncQueue(userId);
   } catch (error) {
-    console.warn('Profile saved locally and queued for sync.', error);
+    console.warn('Profile queued for sync.', error);
     await enqueueSyncAction({
       type: 'profile',
       id: 'profile',
@@ -179,8 +194,57 @@ export async function saveOrQueueProfile(userId: string, profile: UserProfile) {
   }
 }
 
+export async function saveOrQueueNotification(userId: string, notification: AppNotificationItem) {
+  try {
+    await saveNotification(userId, notification);
+    await flushSyncQueue(userId);
+  } catch (error) {
+    console.warn('Notification queued for sync.', error);
+    await enqueueSyncAction({
+      type: 'notification',
+      action: 'save',
+      id: notification.id,
+      payload: notification,
+      createdAt: Date.now(),
+    });
+  }
+}
+
+export async function deleteOrQueueNotification(userId: string, notification: AppNotificationItem | string) {
+  const notificationId = typeof notification === 'string' ? notification : notification.id;
+  const payload =
+    typeof notification === 'string'
+      ? {
+          id: notificationId,
+          kind: 'system' as const,
+          title: '',
+          body: '',
+          timestamp: Date.now(),
+          read: true,
+        }
+      : notification;
+
+  try {
+    await deleteNotification(userId, notificationId);
+    await flushSyncQueue(userId);
+  } catch (error) {
+    console.warn('Notification delete queued for sync.', error);
+    await enqueueSyncAction({
+      type: 'notification',
+      action: 'delete',
+      id: notificationId,
+      payload,
+      createdAt: Date.now(),
+    });
+  }
+}
+
 export async function getSyncQueueLength(): Promise<number> {
   return (await readQueue()).length;
+}
+
+export async function clearSyncQueue() {
+  await AsyncStorage.removeItem(QUEUE_KEY);
 }
 
 async function syncQueueItem(userId: string, item: QueueItem) {
@@ -194,6 +258,12 @@ async function syncQueueItem(userId: string, item: QueueItem) {
     await saveNote(userId, item.payload);
   } else if (item.type === 'settings') {
     await saveUserSettings(userId, item.payload);
+  } else if (item.type === 'notification') {
+    if (item.action === 'save') {
+      await saveNotification(userId, item.payload);
+    } else {
+      await deleteNotification(userId, item.id);
+    }
   } else {
     await saveUserProfile(userId, item.payload);
   }

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { MetricCard } from '@/components/ui/metric-card';
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { TransactionCard } from '@/components/transaction/transaction-card';
+import { WalletCard } from '@/components/wallet/wallet-card';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRecentTransactions, useTransactionSummary } from '@/hooks/useTransactions';
@@ -12,19 +13,21 @@ import { useWallets } from '@/hooks/useWallet';
 import { formatCurrency } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WalletCard } from '@/components/wallet/wallet-card';
-import { useUserStore } from '@/store/userStore';
+import { useNotificationStore } from '@/store/notificationStore';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const theme = useAppTheme();
   const { totalBalance, walletStats } = useWallets();
   const recentTransactions = useRecentTransactions();
   const summary = useTransactionSummary();
-  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+  const unreadNotifications = useNotificationStore((state) => state.unreadCount);
+
+  const compact = width < 390;
 
   return (
     <ScrollView
@@ -36,44 +39,69 @@ export default function DashboardScreen() {
         <View>
           <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '700' }}>SpendMap</Text>
           <Text style={{ color: theme.text, fontSize: 28, fontWeight: '900' }}>Money cockpit</Text>
-          {!isAuthenticated ? (
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                marginTop: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: theme.notificationBackground,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
-            >
-              <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>Guest mode</Text>
-            </View>
-          ) : null}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <AppIcon
-            name="notifications-outline"
-            color={theme.text}
-            backgroundColor={theme.notificationBackground}
-          />
+          <Pressable
+            onPress={() => router.push('/notifications')}
+            style={{ position: 'relative' }}
+          >
+            <AppIcon name="notifications-outline" color={theme.text} backgroundColor={theme.notificationBackground} />
+            {unreadNotifications ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: Palette.orange,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
           <ThemeToggleButton />
         </View>
       </View>
 
       <Card
         style={{
-          padding: 22,
-          gap: 20,
+          padding: compact ? 18 : 22,
+          gap: compact ? 14 : 18,
           overflow: 'hidden',
           backgroundColor: theme.surfaceElevated,
           borderColor: `${Palette.blue}50`,
         }}
       >
-        <View style={{ position: 'absolute', right: -40, top: -42, width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(16,185,129,0.18)' }} />
-        <View style={{ position: 'absolute', left: -50, bottom: -52, width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(59,130,246,0.16)' }} />
+        <View
+          style={{
+            position: 'absolute',
+            right: -40,
+            top: -42,
+            width: 140,
+            height: 140,
+            borderRadius: 70,
+            backgroundColor: 'rgba(16,185,129,0.18)',
+          }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            left: -50,
+            bottom: -52,
+            width: 150,
+            height: 150,
+            borderRadius: 75,
+            backgroundColor: 'rgba(59,130,246,0.16)',
+          }}
+        />
         <View style={{ gap: 8 }}>
           <Text style={{ color: theme.muted, fontWeight: '800', letterSpacing: 0.4 }}>TOTAL BALANCE</Text>
           <Text style={{ color: theme.text, fontSize: 40, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
@@ -83,18 +111,44 @@ export default function DashboardScreen() {
             Split across {walletStats.length} active wallets • updates instantly
           </Text>
         </View>
+
+        <View style={{ gap: 2 }}>
+          <Text style={{ color: theme.text, fontSize: compact ? 14 : 15, fontWeight: '900' }}>Quick actions</Text>
+          <Text style={{ color: theme.muted, fontSize: 12 }}>Jump straight to the most used flows.</Text>
+        </View>
+
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Button
-            label="Expense"
-            icon="remove-circle-outline"
-            onPress={() => router.push('/add-expense')}
-            style={{ flex: 1, backgroundColor: Palette.orange }}
-          />
           <Button
             label="Income"
             icon="add-circle-outline"
             onPress={() => router.push('/add-income')}
+            compact={compact}
             style={{ flex: 1, backgroundColor: Palette.emerald }}
+          />
+          <Button
+            label="Expense"
+            icon="remove-circle-outline"
+            onPress={() => router.push('/add-expense')}
+            compact={compact}
+            style={{ flex: 1, backgroundColor: Palette.orange }}
+          />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Button
+            label="History"
+            icon="receipt-outline"
+            onPress={() => router.push('/history')}
+            secondary
+            compact={compact}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Report"
+            icon="document-text-outline"
+            onPress={() => router.push('/report')}
+            secondary
+            compact={compact}
+            style={{ flex: 1 }}
           />
         </View>
       </Card>
@@ -153,9 +207,7 @@ export default function DashboardScreen() {
           </Text>
         </View>
         {recentTransactions.length ? (
-          recentTransactions.map((transaction) => (
-            <TransactionCard key={transaction.id} transaction={transaction} />
-          ))
+          recentTransactions.map((transaction) => <TransactionCard key={transaction.id} transaction={transaction} />)
         ) : (
           <EmptyState
             icon="sparkles-outline"

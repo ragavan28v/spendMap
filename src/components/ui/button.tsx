@@ -10,10 +10,12 @@ interface ButtonProps {
   secondary?: boolean;
   icon?: string;
   style?: ViewStyle;
+  compact?: boolean;
 }
 
-export function Button({ label, onPress, secondary, icon, style }: ButtonProps) {
+export function Button({ label, onPress, secondary, icon, style, compact }: ButtonProps) {
   const theme = useAppTheme();
+  const iconOnly = !label;
 
   return (
     <Pressable
@@ -22,12 +24,14 @@ export function Button({ label, onPress, secondary, icon, style }: ButtonProps) 
         {
           borderRadius: Radius.md,
           borderCurve: 'continuous',
-          paddingVertical: 14,
-          paddingHorizontal: 16,
+          paddingVertical: iconOnly ? 0 : compact ? 11 : 14,
+          paddingHorizontal: iconOnly ? 0 : compact ? 13 : 16,
+          width: iconOnly ? 40 : undefined,
+          height: iconOnly ? 40 : undefined,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
-          gap: 8,
+          gap: iconOnly ? 0 : compact ? 6 : 8,
           backgroundColor: secondary ? theme.buttonSecondaryBackground : theme.accent,
           borderWidth: 1,
           borderColor: secondary ? theme.border : 'rgba(255, 255, 255, 0.16)',
@@ -36,10 +40,12 @@ export function Button({ label, onPress, secondary, icon, style }: ButtonProps) 
         style,
       ]}
     >
-      {icon ? <AppIcon name={icon} color={secondary ? theme.text : '#FFFFFF'} size={18} /> : null}
-      <Text style={{ color: secondary ? theme.text : '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
-        {label}
-      </Text>
+      {icon ? <AppIcon name={icon} color={secondary ? theme.text : '#FFFFFF'} size={compact ? 16 : 18} /> : null}
+      {label ? (
+        <Text style={{ color: secondary ? theme.text : '#FFFFFF', fontSize: compact ? 13 : 15, fontWeight: '700' }}>
+          {label}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

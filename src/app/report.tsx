@@ -5,13 +5,15 @@ import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { buildManualReportPreview, exportManualReport, type ReportScope } from '@/services/report/manual-report';
+import { useNotificationStore } from '@/store/notificationStore';
+import { showFeedbackDialog } from '@/store/feedbackDialogStore';
 import { useCategoryStore } from '@/store/categoryStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useUserStore } from '@/store/userStore';
 import { useWalletStore } from '@/store/walletStore';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ReportScreen() {
@@ -58,17 +60,35 @@ export default function ReportScreen() {
       });
 
       if (result.savedLocally) {
-        Alert.alert('Report saved', `Your ${format.toUpperCase()} report was saved in the folder you selected.`);
+        showFeedbackDialog({
+          title: 'Report saved',
+          message: `Your ${format.toUpperCase()} report was saved in the folder you selected.`,
+          variant: 'success',
+        });
+        useNotificationStore.getState().addNotification({
+          id: `report-${Date.now()}`,
+          kind: 'report',
+          title: `${format.toUpperCase()} report saved`,
+          body: `Your ${format.toUpperCase()} report was exported successfully.`,
+          timestamp: Date.now(),
+          read: false,
+          route: '/history',
+        });
         return;
       }
 
-      Alert.alert(
-        'Save access needed',
-        `We created the ${format.toUpperCase()} report, but Android storage access was not granted. Please allow folder access to save it to your device.`
-      );
+      showFeedbackDialog({
+        title: 'Save access needed',
+        message: `We created the ${format.toUpperCase()} report, but Android storage access was not granted. Please allow folder access to save it to your device.`,
+        variant: 'warning',
+      });
     } catch (error) {
       console.error('Manual report export failed', error);
-      Alert.alert('Report failed', error instanceof Error ? error.message : 'Unable to generate the report.');
+      showFeedbackDialog({
+        title: 'Report failed',
+        message: error instanceof Error ? error.message : 'Unable to generate the report.',
+        variant: 'error',
+      });
     } finally {
       setIsExporting(false);
     }

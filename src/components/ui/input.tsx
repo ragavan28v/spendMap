@@ -10,9 +10,11 @@ interface InputProps extends Pick<TextInputProps, 'multiline' | 'numberOfLines'>
   placeholder?: string;
   keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
   prefix?: string;
+  secureTextEntry?: boolean;
+  maxLength?: number;
 }
 
-export function Input({ label, value, onChangeText, placeholder, keyboardType, prefix }: InputProps) {
+export function Input({ label, value, onChangeText, placeholder, keyboardType, prefix, secureTextEntry, maxLength }: InputProps) {
   const theme = useAppTheme();
 
   return (
@@ -27,6 +29,8 @@ export function Input({ label, value, onChangeText, placeholder, keyboardType, p
           placeholder={placeholder}
           placeholderTextColor={theme.muted}
           keyboardType={keyboardType}
+          secureTextEntry={secureTextEntry}
+          maxLength={maxLength}
           accessibilityLabel={label}
         />
       </View>

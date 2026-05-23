@@ -41,6 +41,15 @@ export function formatTime(timestamp: number) {
   });
 }
 
+export function formatDateTimeLabel(timestamp: number) {
+  return new Date(timestamp).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function startOfToday() {
   return new Date().setHours(0, 0, 0, 0);
 }

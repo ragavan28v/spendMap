@@ -10,6 +10,7 @@ export type WalletType =
 
 export type TransactionType = 'income' | 'expense';
 export type RecurringType = 'daily' | 'weekly' | 'monthly' | 'none';
+export type AppNotificationKind = 'transaction' | 'report' | 'reminder' | 'system';
 
 export interface Wallet {
   id: string;
@@ -57,6 +58,8 @@ export interface NoteItem {
   title: string;
   content: string;
   pinned: boolean;
+  reminderAt?: number;
+  reminderNotificationId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -81,6 +84,17 @@ export interface UserSettings {
   theme: 'dark' | 'light' | 'system';
   currency: string;
   appLockEnabled: boolean;
-  biometricEnabled: boolean;
   notificationsEnabled: boolean;
+}
+
+export interface AppNotificationItem {
+  id: string;
+  kind: AppNotificationKind;
+  title: string;
+  body: string;
+  timestamp: number;
+  read: boolean;
+  noteId?: string;
+  transactionId?: string;
+  route?: string;
 }

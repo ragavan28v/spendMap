@@ -1,6 +1,7 @@
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { persistNotes } from '@/services/persistence';
+import { cancelScheduledNotification } from '@/services/notifications/notifications';
 import { saveOrQueueNote } from '@/services/sync/offlineQueue';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useUserStore } from '@/store/userStore';
 import { NoteItem } from '@/types';
 import { create } from 'zustand';
@@ -10,6 +11,7 @@ export interface NoteState {
   setNotes: (notes: NoteItem[]) => void;
   upsertNote: (note: NoteItem) => void;
   togglePinned: (noteId: string) => void;
+  deleteNote: (noteId: string) => void;
 }
 
 export const useNoteStore = create<NoteState>()((set) => ({
@@ -17,7 +19,6 @@ export const useNoteStore = create<NoteState>()((set) => ({
 
   setNotes: (notes) => {
     set((state) => {
-      persistNotes(notes);
       return {
         ...state,
         notes,
@@ -27,7 +28,11 @@ export const useNoteStore = create<NoteState>()((set) => ({
 
   upsertNote: (note) => {
     set((state) => {
-      const exists = state.notes.some((item) => item.id === note.id);
+      const existingNote = state.notes.find((item) => item.id === note.id);
+      const exists = Boolean(existingNote);
+      if (existingNote?.reminderNotificationId && existingNote.reminderNotificationId !== note.reminderNotificationId) {
+        void cancelScheduledNotification(existingNote.reminderNotificationId);
+      }
       const notes = exists
         ? state.notes.map((item) => (item.id === note.id ? note : item))
         : [note, ...state.notes];
@@ -37,7 +42,6 @@ export const useNoteStore = create<NoteState>()((set) => ({
         }
         return second.updatedAt - first.updatedAt;
       });
-      persistNotes(sortedNotes);
       const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
       if (userId) {
         saveOrQueueNote(userId, note);
@@ -49,17 +53,33 @@ export const useNoteStore = create<NoteState>()((set) => ({
     });
   },
 
-  togglePinned: (noteId) => {
-    set((state) => {
-      const notes = state.notes.map((note) =>
-        note.id === noteId ? { ...note, pinned: !note.pinned, updatedAt: Date.now() } : note
-      );
-      persistNotes(notes);
-      const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
-      const note = notes.find((item) => item.id === noteId);
-      if (userId && note) {
-        saveOrQueueNote(userId, note);
+    togglePinned: (noteId) => {
+      set((state) => {
+        const notes = state.notes.map((note) =>
+          note.id === noteId ? { ...note, pinned: !note.pinned, updatedAt: Date.now() } : note
+        );
+        const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
+        const note = notes.find((item) => item.id === noteId);
+        if (userId && note) {
+          saveOrQueueNote(userId, note);
       }
+      return {
+        ...state,
+        notes,
+      };
+    });
+  },
+
+  deleteNote: (noteId) => {
+    set((state) => {
+      const note = state.notes.find((item) => item.id === noteId);
+      if (note?.reminderNotificationId) {
+        void cancelScheduledNotification(note.reminderNotificationId);
+      }
+
+      const notes = state.notes.filter((item) => item.id !== noteId);
+      useNotificationStore.getState().removeNotificationsByNoteId(noteId);
+
       return {
         ...state,
         notes,

@@ -8,6 +8,8 @@ import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
 import { saveTransactionWithWallet } from '@/services/firebase/firestore';
 import { buildTransaction } from '@/services/finance/transactions';
 import { useCategoryStore } from '@/store/categoryStore';
+import { showFeedbackDialog } from '@/store/feedbackDialogStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useWalletStore } from '@/store/walletStore';
 import { RecurringType } from '@/types';
@@ -71,6 +73,21 @@ export default function AddExpenseScreen() {
       await saveTransactionWithWallet(userId, transaction, updatedWallet);
       useWalletStore.getState().applyTransactionLocal(transaction);
       useTransactionStore.getState().addTransactionLocal(transaction);
+      useNotificationStore.getState().addNotification({
+        id: `transaction-${transaction.id}`,
+        kind: 'transaction',
+        title: 'Expense saved',
+        body: `${formatCurrency(amountValue)} deducted from ${selectedWallet.name}.`,
+        timestamp: Date.now(),
+        read: false,
+        transactionId: transaction.id,
+        route: '/history',
+      });
+      showFeedbackDialog({
+        title: 'Expense saved',
+        message: `${formatCurrency(amountValue)} was deducted from ${selectedWallet.name}.`,
+        variant: 'success',
+      });
       router.back();
     } catch (submitError) {
       console.error('Firestore expense save failed', submitError);

@@ -6,7 +6,12 @@ import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
+import { deleteTransactionWithWallet } from '@/services/firebase/firestore';
+import { showFeedbackDialog } from '@/store/feedbackDialogStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
+import { useWalletStore } from '@/store/walletStore';
 import { TransactionRecord, TransactionType } from '@/types';
 import { formatDateLabel, startOfMonth, startOfToday, startOfWeek, startOfYear } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
@@ -22,6 +27,10 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const transactions = useTransactionStore((state) => state.transactions);
+  const removeTransactionLocal = useTransactionStore((state) => state.removeTransactionLocal);
+  const wallets = useWalletStore((state) => state.wallets);
+  const upsertWallet = useWalletStore((state) => state.upsertWallet);
+  const removeNotificationsByTransactionId = useNotificationStore((state) => state.removeNotificationsByTransactionId);
 
   const [range, setRange] = useState<RangeFilter>('all');
   const [type, setType] = useState<TransactionType | 'all'>('all');
@@ -41,6 +50,54 @@ export default function HistoryScreen() {
   }, [transactions, range, type, sort, search]);
 
   const groups = useMemo(() => groupTransactions(filtered), [filtered]);
+
+  function handleEditTransaction(transaction: TransactionRecord) {
+    router.push({ pathname: '/edit-transaction/[id]', params: { id: transaction.id } });
+  }
+
+  function handleDeleteTransaction(transaction: TransactionRecord) {
+    showFeedbackDialog({
+      title: 'Delete transaction?',
+      message: 'This will remove the transaction and restore the wallet balance.',
+      variant: 'warning',
+      primaryLabel: 'Delete',
+      secondaryLabel: 'Cancel',
+      onPrimary: () => {
+        const signedAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+        const wallet = wallets.find((item) => item.id === transaction.walletId);
+        if (!wallet) {
+          removeTransactionLocal(transaction.id);
+          removeNotificationsByTransactionId(transaction.id);
+          showFeedbackDialog({
+            title: 'Transaction removed',
+            message: 'The transaction was removed from your history.',
+            variant: 'success',
+          });
+          return;
+        }
+
+        const restoredWallet = {
+          ...wallet,
+          balance: wallet.balance - signedAmount,
+        };
+
+        upsertWallet(restoredWallet);
+        removeTransactionLocal(transaction.id);
+        removeNotificationsByTransactionId(transaction.id);
+
+        const userId = getCurrentFirebaseUserId();
+        if (userId) {
+          void deleteTransactionWithWallet(userId, transaction.id, restoredWallet);
+        }
+
+        showFeedbackDialog({
+          title: 'Transaction removed',
+          message: 'The wallet balance has been restored.',
+          variant: 'success',
+        });
+      },
+    });
+  }
 
   return (
     <ScrollView
@@ -101,7 +158,12 @@ export default function HistoryScreen() {
           <View key={group.label} style={{ gap: 10 }}>
             <Text style={{ color: theme.muted, fontSize: 13, fontWeight: '900' }}>{group.label}</Text>
             {group.transactions.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} />
+              <TransactionCard
+                key={transaction.id}
+                transaction={transaction}
+                onEdit={handleEditTransaction}
+                onDelete={handleDeleteTransaction}
+              />
             ))}
           </View>
         ))

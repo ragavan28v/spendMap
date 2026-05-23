@@ -8,6 +8,8 @@ import { IncomeSourceId, incomeSources } from '@/constants/income-sources';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
 import { saveTransactionWithWallet } from '@/services/firebase/firestore';
 import { buildTransaction } from '@/services/finance/transactions';
+import { showFeedbackDialog } from '@/store/feedbackDialogStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useWalletStore } from '@/store/walletStore';
 import { RecurringType } from '@/types';
@@ -66,6 +68,21 @@ export default function AddIncomeScreen() {
       await saveTransactionWithWallet(userId, transaction, updatedWallet);
       useWalletStore.getState().applyTransactionLocal(transaction);
       useTransactionStore.getState().addTransactionLocal(transaction);
+      useNotificationStore.getState().addNotification({
+        id: `transaction-${transaction.id}`,
+        kind: 'transaction',
+        title: 'Income saved',
+        body: `${formatCurrency(amountValue)} added to ${selectedWallet.name}.`,
+        timestamp: Date.now(),
+        read: false,
+        transactionId: transaction.id,
+        route: '/history',
+      });
+      showFeedbackDialog({
+        title: 'Income saved',
+        message: `${formatCurrency(amountValue)} was added to ${selectedWallet.name}.`,
+        variant: 'success',
+      });
       router.back();
     } catch (submitError) {
       console.error('Firestore income save failed', submitError);

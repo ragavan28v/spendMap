@@ -1,6 +1,7 @@
 import { Category, NoteItem, TransactionRecord, UserProfile, UserSettings, Wallet } from '@/types';
 import {
     collection,
+    deleteDoc,
     doc,
     getDoc,
     getDocs,
@@ -34,6 +35,7 @@ export const getWalletsCollection = (userId: string) => collection(firebaseFires
 export const getCategoriesCollection = (userId: string) => collection(firebaseFirestore, 'users', userId, 'categories');
 export const getTransactionsCollection = (userId: string) => collection(firebaseFirestore, 'users', userId, 'transactions');
 export const getNotesCollection = (userId: string) => collection(firebaseFirestore, 'users', userId, 'notes');
+export const getNotificationsCollection = (userId: string) => collection(firebaseFirestore, 'users', userId, 'notifications');
 export const getSettingsDoc = (userId: string) => doc(firebaseFirestore, 'users', userId, 'settings', 'main');
 
 export async function fetchUserWallets(userId: string): Promise<Wallet[]> {
@@ -64,6 +66,17 @@ export async function fetchUserNotes(userId: string): Promise<NoteItem[]> {
     });
 }
 
+export async function fetchUserNotifications<T extends { timestamp: number }>(userId: string): Promise<T[]> {
+  const q = query(getNotificationsCollection(userId), orderBy('timestamp', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => docSnap.data() as T);
+}
+
+export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+  const snapshot = await getDoc(getUserProfileRef(userId));
+  return snapshot.exists() ? (snapshot.data() as UserProfile) : null;
+}
+
 export async function saveTransaction(userId: string, transaction: TransactionRecord) {
   const transactionRef = doc(getTransactionsCollection(userId), transaction.id);
   await setDoc(transactionRef, withoutUndefinedFields(transaction));
@@ -89,6 +102,53 @@ export async function saveTransactionWithWallet(
   await batch.commit();
 }
 
+export async function updateTransactionWithWallet(
+  userId: string,
+  transaction: TransactionRecord,
+  wallet: Wallet
+) {
+  const transactionRef = doc(getTransactionsCollection(userId), transaction.id);
+  const walletRef = doc(getWalletsCollection(userId), wallet.id);
+  const batch = writeBatch(firebaseFirestore);
+
+  batch.set(transactionRef, withoutUndefinedFields(transaction));
+  batch.set(walletRef, withoutUndefinedFields(wallet));
+
+  await batch.commit();
+}
+
+export async function updateTransactionWithWallets(
+  userId: string,
+  transaction: TransactionRecord,
+  wallets: Wallet[]
+) {
+  const transactionRef = doc(getTransactionsCollection(userId), transaction.id);
+  const batch = writeBatch(firebaseFirestore);
+
+  batch.set(transactionRef, withoutUndefinedFields(transaction));
+  wallets.forEach((wallet) => {
+    const walletRef = doc(getWalletsCollection(userId), wallet.id);
+    batch.set(walletRef, withoutUndefinedFields(wallet));
+  });
+
+  await batch.commit();
+}
+
+export async function deleteTransactionWithWallet(
+  userId: string,
+  transactionId: string,
+  wallet: Wallet
+) {
+  const transactionRef = doc(getTransactionsCollection(userId), transactionId);
+  const walletRef = doc(getWalletsCollection(userId), wallet.id);
+  const batch = writeBatch(firebaseFirestore);
+
+  batch.delete(transactionRef);
+  batch.set(walletRef, withoutUndefinedFields(wallet));
+
+  await batch.commit();
+}
+
 export async function saveCategory(userId: string, category: Category) {
   const categoryRef = doc(getCategoriesCollection(userId), category.id);
   await setDoc(categoryRef, withoutUndefinedFields(category));
@@ -97,6 +157,16 @@ export async function saveCategory(userId: string, category: Category) {
 export async function saveNote(userId: string, note: NoteItem) {
   const noteRef = doc(getNotesCollection(userId), note.id);
   await setDoc(noteRef, withoutUndefinedFields(note));
+}
+
+export async function saveNotification<T extends { id: string }>(userId: string, notification: T) {
+  const notificationRef = doc(getNotificationsCollection(userId), notification.id);
+  await setDoc(notificationRef, withoutUndefinedFields(notification));
+}
+
+export async function deleteNotification(userId: string, notificationId: string) {
+  const notificationRef = doc(getNotificationsCollection(userId), notificationId);
+  await deleteDoc(notificationRef);
 }
 
 export async function saveUserProfile(userId: string, profile: UserProfile) {

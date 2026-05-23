@@ -5,8 +5,8 @@ import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTransactionSummary } from '@/hooks/useTransactions';
-import { useWallets } from '@/hooks/useWallet';
 import { useTransactionStore } from '@/store/transactionStore';
+import { useWalletStore } from '@/store/walletStore';
 import { formatCurrency, startOfMonth, startOfToday, startOfWeek, startOfYear } from '@/utils/formatters';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -19,7 +19,7 @@ export default function AnalyticsScreen() {
   const theme = useAppTheme();
   const [period, setPeriod] = useState<Period>('monthly');
   const transactions = useTransactionStore((state) => state.transactions);
-  const { walletStats } = useWallets();
+  const wallets = useWalletStore((state) => state.wallets);
   const summary = useTransactionSummary();
 
   const analytics = useMemo(() => {
@@ -36,18 +36,48 @@ export default function AnalyticsScreen() {
         categoryTotals.set(item.categoryName, { amount: current.amount + item.amount, color: item.categoryColor });
       });
 
+    const walletTotals = new Map<string, { name: string; color: string; amount: number }>();
+    scoped
+      .filter((transaction) => transaction.type === 'expense')
+      .forEach((transaction) => {
+        const wallet = wallets.find((item) => item.id === transaction.walletId);
+        const current = walletTotals.get(transaction.walletId) ?? {
+          name: wallet?.name ?? transaction.walletName,
+          color: wallet?.color ?? Palette.blue,
+          amount: 0,
+        };
+        walletTotals.set(transaction.walletId, {
+          ...current,
+          amount: current.amount + transaction.amount,
+        });
+      });
+
+    const walletUsageBreakdown = Array.from(walletTotals.entries())
+      .map(([walletId, value]) => ({ id: walletId, ...value }))
+      .sort((first, second) => second.amount - first.amount);
+    const walletUsageTotal = walletUsageBreakdown.reduce((sum, wallet) => sum + wallet.amount, 0);
+
+    const categoryBreakdown = Array.from(categoryTotals.entries())
+      .map(([name, value]) => ({ name, ...value }))
+      .sort((first, second) => second.amount - first.amount);
+    const categoryTotal = categoryBreakdown.reduce((sum, category) => sum + category.amount, 0);
+
     return {
       income,
       expense,
       net: income - expense,
-      categoryBreakdown: Array.from(categoryTotals.entries())
-        .map(([name, value]) => ({ name, ...value }))
-        .sort((first, second) => second.amount - first.amount),
+      categoryBreakdown: categoryBreakdown.map((category) => ({
+        ...category,
+        share: categoryTotal > 0 ? category.amount / categoryTotal : 0,
+      })),
+      categoryTotal,
+      walletUsageBreakdown: walletUsageBreakdown.map((wallet) => ({
+        ...wallet,
+        share: walletUsageTotal > 0 ? wallet.amount / walletUsageTotal : 0,
+      })),
+      walletUsageTotal,
     };
-  }, [transactions, period]);
-
-  const maxCategory = Math.max(...analytics.categoryBreakdown.map((item) => item.amount), 1);
-  const maxWallet = Math.max(...walletStats.map((item) => item.balance), 1);
+  }, [transactions, wallets, period]);
 
   return (
     <ScrollView
@@ -95,9 +125,11 @@ export default function AnalyticsScreen() {
             <View key={item.name} style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={{ color: theme.text, fontWeight: '800' }}>{item.name}</Text>
-                <Text style={{ color: theme.muted, fontWeight: '800' }}>{formatCurrency(item.amount)}</Text>
+                <Text style={{ color: theme.muted, fontWeight: '800' }}>
+                  {formatCurrency(item.amount)} • {Math.round(item.share * 100)}%
+                </Text>
               </View>
-              <ProgressBar value={item.amount / maxCategory} color={item.color} height={10} />
+              <ProgressBar value={item.share} color={item.color} height={10} />
             </View>
           ))
         ) : (
@@ -107,15 +139,21 @@ export default function AnalyticsScreen() {
 
       <Card style={{ padding: 16, gap: 14 }}>
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Wallet usage</Text>
-        {walletStats.map((wallet) => (
-          <View key={wallet.id} style={{ gap: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
-              <Text style={{ color: theme.muted, fontWeight: '800' }}>{formatCurrency(wallet.balance)}</Text>
+        {analytics.walletUsageBreakdown.length ? (
+          analytics.walletUsageBreakdown.map((wallet) => (
+            <View key={wallet.id} style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
+                <Text style={{ color: theme.muted, fontWeight: '800' }}>
+                  {formatCurrency(wallet.amount)} • {Math.round(wallet.share * 100)}%
+                </Text>
+              </View>
+              <ProgressBar value={wallet.share} color={wallet.color} height={10} />
             </View>
-            <ProgressBar value={wallet.balance / maxWallet} color={wallet.color} height={10} />
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={{ color: theme.muted }}>No wallet spending in this period.</Text>
+        )}
       </Card>
     </ScrollView>
   );
