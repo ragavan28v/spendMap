@@ -4,20 +4,21 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
+import { WalletManagementModal } from '@/components/wallet/wallet-management-modal';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { signOutUser } from '@/services/firebase/auth';
-import { clearPersistedState } from '@/services/persistence';
 import { cancelAllReminderNotifications } from '@/services/notifications/notifications';
+import { clearPersistedState } from '@/services/persistence';
 import { clearPin, hasPin, savePin } from '@/services/security/app-lock';
 import { clearSyncQueue, saveOrQueueProfile } from '@/services/sync/offlineQueue';
 import { useCategoryStore } from '@/store/categoryStore';
-import { useNotificationStore } from '@/store/notificationStore';
 import { useNoteStore } from '@/store/noteStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useUserStore } from '@/store/userStore';
 import { useWalletStore } from '@/store/walletStore';
-import { Wallet, WalletType, UserProfile } from '@/types';
+import { UserProfile, Wallet, WalletType } from '@/types';
 import { formatCurrency } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -42,6 +43,8 @@ export default function SettingsScreen() {
   const wallets = useWalletStore((state) => state.wallets);
   const upsertWallet = useWalletStore((state) => state.upsertWallet);
   const toggleWallet = useWalletStore((state) => state.toggleWallet);
+  const deleteWallet = useWalletStore((state) => state.deleteWallet);
+  const linkWalletToParent = useWalletStore((state) => state.linkWalletToParent);
   const resetWallets = useWalletStore((state) => state.resetWallets);
   const initializeCategories = useCategoryStore((state) => state.initializeCategories);
   const setTransactions = useTransactionStore((state) => state.setTransactions);
@@ -51,12 +54,16 @@ export default function SettingsScreen() {
   const [walletName, setWalletName] = useState('');
   const [walletBalance, setWalletBalance] = useState('');
   const [preset, setPreset] = useState(walletPresets[0]);
+  const [fundingSourceId, setFundingSourceId] = useState<string | undefined>(undefined);
+  const [walletError, setWalletError] = useState<string | null>(null);
   const [pinValue, setPinValue] = useState('');
   const [confirmPinValue, setConfirmPinValue] = useState('');
   const [storedPinExists, setStoredPinExists] = useState(false);
   const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [displayName, setDisplayName] = useState(profile?.name ?? '');
+  const [managedWallet, setManagedWallet] = useState<Wallet | null>(null);
+  const [walletManagementVisible, setWalletManagementVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -110,25 +117,6 @@ export default function SettingsScreen() {
     setIsEditingProfile(false);
   }
 
-  function handleAddWallet() {
-    const balance = Number(walletBalance || 0);
-    const timestamp = Date.now();
-    const wallet: Wallet = {
-      id: `wallet-${preset.type}-${timestamp}`,
-      name: walletName.trim() || preset.name,
-      type: preset.type,
-      balance: Number.isFinite(balance) ? balance : 0,
-      icon: preset.icon,
-      color: preset.color,
-      isEnabled: true,
-      isDefault: false,
-      createdAt: timestamp,
-    };
-    upsertWallet(wallet);
-    setWalletName('');
-    setWalletBalance('');
-  }
-
   async function handleNotificationsToggle(value: boolean) {
     setSettings({ notificationsEnabled: value });
     if (!value) {
@@ -167,6 +155,41 @@ export default function SettingsScreen() {
     setPinValue('');
     setConfirmPinValue('');
     setSecurityMessage('PIN saved. App lock is on.');
+  }
+
+  function handleAddWallet() {
+    const parsedBalance = Number(walletBalance.trim());
+    const balance = Number.isFinite(parsedBalance) && parsedBalance >= 0 ? parsedBalance : 0;
+    if (walletBalance.trim().length > 0 && !Number.isFinite(parsedBalance)) {
+      setWalletError('Enter a valid opening balance.');
+      return;
+    }
+
+    const fundingWallet = fundingSourceId ? wallets.find((item) => item.id === fundingSourceId) : undefined;
+    const newWalletBalance = fundingWallet ? fundingWallet.balance : balance;
+    const timestamp = Date.now();
+    const wallet: Wallet = {
+      id: `wallet-${preset.type}-${timestamp}`,
+      name: walletName.trim() || preset.name,
+      type: preset.type,
+      balance: newWalletBalance,
+      icon: preset.icon,
+      color: preset.color,
+      isEnabled: true,
+      isDefault: false,
+      createdAt: timestamp,
+      fundingSourceWalletId: fundingSourceId,
+    };
+
+    upsertWallet(wallet);
+    if (fundingWallet && balance > 0) {
+      upsertWallet({ ...fundingWallet, balance: fundingWallet.balance + balance });
+    }
+
+    setWalletName('');
+    setWalletBalance('');
+    setFundingSourceId(undefined);
+    setWalletError(null);
   }
 
   async function handleClearPin() {
@@ -332,16 +355,41 @@ export default function SettingsScreen() {
 
       <Card style={{ padding: 16, gap: 14 }}>
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Wallet management</Text>
-        {wallets.map((wallet) => (
-          <View key={wallet.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <AppIcon name={wallet.icon} color={wallet.color} backgroundColor={`${wallet.color}20`} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
-              <Text style={{ color: theme.muted, fontSize: 12 }}>{formatCurrency(wallet.balance)}</Text>
+        {wallets.map((wallet) => {
+          const parentWallet = wallet.fundingSourceWalletId
+            ? wallets.find((item) => item.id === wallet.fundingSourceWalletId)
+            : undefined;
+          const displayBalance = parentWallet ? parentWallet.balance : wallet.balance;
+
+          return (
+            <View key={wallet.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <AppIcon name={wallet.icon} color={wallet.color} backgroundColor={`${wallet.color}20`} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontWeight: '800' }}>{wallet.name}</Text>
+                <Text style={{ color: theme.muted, fontSize: 12 }}>{formatCurrency(displayBalance)}</Text>
+                {parentWallet ? (
+                  <Text style={{ color: '#14B8A6', fontSize: 11, marginTop: 2 }}>
+                    Linked to {parentWallet.name}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Switch value={wallet.isEnabled} onValueChange={() => toggleWallet(wallet.id)} />
+                <Button
+                  label=""
+                  icon="ellipsis-vertical-outline"
+                  secondary
+                  compact
+                  onPress={() => {
+                    setManagedWallet(wallet);
+                    setWalletManagementVisible(true);
+                  }}
+                  style={{ width: 40, height: 40, borderRadius: 20 }}
+                />
+              </View>
             </View>
-            <Switch value={wallet.isEnabled} onValueChange={() => toggleWallet(wallet.id)} />
-          </View>
-        ))}
+          );
+        })}
       </Card>
 
       <Card style={{ padding: 16, gap: 14 }}>
@@ -360,9 +408,42 @@ export default function SettingsScreen() {
         </View>
         <Input label="Wallet name" value={walletName} onChangeText={setWalletName} placeholder={preset.name} />
         <Input label="Opening balance" value={walletBalance} onChangeText={setWalletBalance} keyboardType="numeric" prefix="₹" />
+        <PickerSection title="Funding source (optional)" helperText="Choose a wallet that backs this wallet’s balance." theme={theme}>
+          <SelectionChip
+            key="none"
+            label="None"
+            icon="close-circle-outline"
+            color={Palette.slate}
+            selected={fundingSourceId === undefined}
+            onPress={() => setFundingSourceId(undefined)}
+          />
+          {wallets
+            .filter((wallet) => wallet.isEnabled)
+            .map((wallet) => (
+              <SelectionChip
+                key={wallet.id}
+                label={`${wallet.name} • ${formatCurrency(wallet.balance)}`}
+                icon={wallet.icon}
+                color={wallet.color}
+                selected={fundingSourceId === wallet.id}
+                onPress={() => setFundingSourceId(wallet.id)}
+              />
+            ))}
+        </PickerSection>
         <Button label="Add wallet" icon="add-circle-outline" onPress={handleAddWallet} />
       </Card>
 
+      <WalletManagementModal
+        visible={walletManagementVisible}
+        wallet={managedWallet}
+        allWallets={wallets}
+        onClose={() => {
+          setWalletManagementVisible(false);
+          setManagedWallet(null);
+        }}
+        onDelete={deleteWallet}
+        onLinkToParent={linkWalletToParent}
+      />
     </ScrollView>
   );
 }
@@ -413,5 +494,25 @@ function StatusChip({
       <Text style={{ color: theme.muted, fontSize: 11, fontWeight: '700' }}>{label}</Text>
       <Text style={{ color, fontSize: 13, fontWeight: '900' }}>{value}</Text>
     </View>
+  );
+}
+
+function PickerSection({
+  title,
+  helperText,
+  children,
+  theme,
+}: {
+  title: string;
+  helperText?: string;
+  children: React.ReactNode;
+  theme: ReturnType<typeof useAppTheme>;
+}) {
+  return (
+    <Card style={{ padding: 16, gap: 12 }}>
+      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>{title}</Text>
+      {helperText ? <Text style={{ color: theme.muted, fontSize: 12 }}>{helperText}</Text> : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{children}</View>
+    </Card>
   );
 }

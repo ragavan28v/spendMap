@@ -1,33 +1,47 @@
+import { TransactionCard } from '@/components/transaction/transaction-card';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MetricCard } from '@/components/ui/metric-card';
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
-import { TransactionCard } from '@/components/transaction/transaction-card';
 import { WalletCard } from '@/components/wallet/wallet-card';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRecentTransactions, useTransactionSummary } from '@/hooks/useTransactions';
 import { useWallets } from '@/hooks/useWallet';
+import { useNotificationStore } from '@/store/notificationStore';
 import { formatCurrency } from '@/utils/formatters';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNotificationStore } from '@/store/notificationStore';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const theme = useAppTheme();
-  const { totalBalance, walletStats } = useWallets();
+  const { totalBalance, walletStats, wallets } = useWallets();
   const recentTransactions = useRecentTransactions();
   const summary = useTransactionSummary();
   const unreadNotifications = useNotificationStore((state) => state.unreadCount);
 
   const compact = width < 390;
+  const childWalletMap = useMemo(() => {
+    const map = new Map<string, typeof wallets[number][]>();
+
+    wallets
+      .filter((wallet) => wallet.isEnabled && wallet.fundingSourceWalletId)
+      .forEach((wallet) => {
+        const parentId = wallet.fundingSourceWalletId;
+        if (!parentId) return;
+        const existingChildren = map.get(parentId) ?? [];
+        map.set(parentId, [...existingChildren, wallet]);
+      });
+
+    return map;
+  }, [wallets]);
 
   return (
     <ScrollView
@@ -117,7 +131,7 @@ export default function DashboardScreen() {
           <Text style={{ color: theme.muted, fontSize: 12 }}>Jump straight to the most used flows.</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
           <Button
             label="Income"
             icon="add-circle-outline"
@@ -131,6 +145,12 @@ export default function DashboardScreen() {
             onPress={() => router.push('/add-expense')}
             compact={compact}
             style={{ flex: 1, backgroundColor: Palette.orange }}
+          />
+          <Button
+            icon="swap-horizontal-outline"
+            onPress={() => router.push('/add-transfer')}
+            compact={compact}
+            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#3B82F6', padding: 0 }}
           />
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -194,7 +214,12 @@ export default function DashboardScreen() {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
           {walletStats.map((wallet) => (
-            <WalletCard key={wallet.id} wallet={wallet} share={wallet.share} />
+            <WalletCard
+              key={wallet.id}
+              wallet={wallet}
+              share={wallet.share}
+              childWallets={childWalletMap.get(wallet.id) ?? []}
+            />
           ))}
         </ScrollView>
       </View>

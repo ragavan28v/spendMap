@@ -29,13 +29,13 @@ export function useTransactionSummary() {
     transactions.forEach((transaction) => {
       if (transaction.timestamp >= todayStart) {
         if (transaction.type === 'income') summary.earnedToday += transaction.amount;
-        if (transaction.type === 'expense') summary.spentToday += transaction.amount;
+        if (transaction.type === 'expense' && !transaction.isTransfer) summary.spentToday += transaction.amount;
       }
       if (transaction.timestamp >= monthStart) {
         if (transaction.type === 'income') summary.earnedMonth += transaction.amount;
-        if (transaction.type === 'expense') summary.spentMonth += transaction.amount;
+        if (transaction.type === 'expense' && !transaction.isTransfer) summary.spentMonth += transaction.amount;
       }
-      if (transaction.type === 'expense') {
+      if (transaction.type === 'expense' && !transaction.isTransfer) {
         categoryTotals.set(
           transaction.categoryName,
           (categoryTotals.get(transaction.categoryName) ?? 0) + transaction.amount

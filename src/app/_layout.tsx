@@ -1,9 +1,9 @@
 import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation/native';
 import { Redirect, Slot, usePathname } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { User } from 'firebase/auth';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AppLockScreen } from '@/components/security/app-lock-screen';
@@ -12,32 +12,31 @@ import { defaultWallets } from '@/constants/wallets';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { getCurrentFirebaseUserId, observeAuthState } from '@/services/firebase/auth';
 import {
-  fetchUserCategories,
-  fetchUserNotifications,
-  fetchUserProfile,
-  fetchUserNotes,
-  fetchUserSettings,
-  fetchUserTransactions,
-  fetchUserWallets,
-  saveWallet,
+    fetchUserCategories,
+    fetchUserNotes,
+    fetchUserNotifications,
+    fetchUserProfile,
+    fetchUserSettings,
+    fetchUserTransactions,
+    fetchUserWallets,
+    saveWallet,
 } from '@/services/firebase/firestore';
-import { clearPersistedState } from '@/services/persistence';
 import {
-  cancelAllReminderNotifications,
-  buildDueReminderNotifications,
-  initializeNotifications,
+    buildDueReminderNotifications,
+    cancelAllReminderNotifications,
+    initializeNotifications,
 } from '@/services/notifications/notifications';
 import {
-  clearAppLockBackgroundAt,
-  getAppLockBackgroundAt,
-  hasPin,
-  setAppLockBackgroundAt,
+    clearAppLockBackgroundAt,
+    getAppLockBackgroundAt,
+    hasPin,
+    setAppLockBackgroundAt,
 } from '@/services/security/app-lock';
 import { flushSyncQueue, saveOrQueueNotification, saveOrQueueProfile } from '@/services/sync/offlineQueue';
 import { getStoredThemePreference } from '@/services/theme-preference';
 import { useCategoryStore } from '@/store/categoryStore';
-import { useNotificationStore } from '@/store/notificationStore';
 import { useNoteStore } from '@/store/noteStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useUserStore } from '@/store/userStore';
 import { useWalletStore } from '@/store/walletStore';
@@ -186,7 +185,6 @@ export default function RootLayout() {
       setAuthResolved(true);
 
       if (user) {
-        setSessionHydrated(false);
         const loginThemePreference = useUserStore.getState().settings.theme;
         const existingProfile = useUserStore.getState().profile;
         const existingProfileMatchesUser = existingProfile?.uid === user.uid;
@@ -213,9 +211,9 @@ export default function RootLayout() {
         setTransactions([]);
         setNotes([]);
         hydrateNotifications([]);
-        void clearPersistedState();
+        setSessionHydrated(true);
 
-        (async () => {
+        void (async () => {
           try {
             await flushSyncQueue(user.uid);
             const [
@@ -226,16 +224,19 @@ export default function RootLayout() {
               settingsResult,
               notesResult,
               notificationsResult,
-            ] =
-              await Promise.allSettled([
-                fetchUserProfile(user.uid),
-                fetchUserWallets(user.uid),
-                fetchUserCategories(user.uid),
-                fetchUserTransactions(user.uid),
-                fetchUserSettings(user.uid),
-                fetchUserNotes(user.uid),
-                fetchUserNotifications<AppNotificationItem>(user.uid),
-              ]);
+            ] = await Promise.allSettled([
+              fetchUserProfile(user.uid),
+              fetchUserWallets(user.uid),
+              fetchUserCategories(user.uid),
+              fetchUserTransactions(user.uid),
+              fetchUserSettings(user.uid),
+              fetchUserNotes(user.uid),
+              fetchUserNotifications<AppNotificationItem>(user.uid),
+            ]);
+
+            if (!active) {
+              return;
+            }
 
             if (profileResult.status === 'fulfilled' && profileResult.value) {
               setProfile({
@@ -309,12 +310,8 @@ export default function RootLayout() {
                 }
               });
             }
-
-            await clearPersistedState();
-          } finally {
-            if (active) {
-              setSessionHydrated(true);
-            }
+          } catch (error) {
+            console.warn('Unable to hydrate app data on startup.', error);
           }
         })();
       } else {

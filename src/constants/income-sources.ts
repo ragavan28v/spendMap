@@ -21,6 +21,13 @@ export const incomeSources = [
     defaultRecurringType: 'none',
   },
   {
+    id: 'income-cashback',
+    name: 'Cashback',
+    icon: 'card-outline',
+    color: '#F59E0B',
+    defaultRecurringType: 'none',
+  },
+  {
     id: 'income-gift',
     name: 'Gift',
     icon: 'gift-outline',

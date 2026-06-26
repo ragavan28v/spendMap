@@ -43,7 +43,7 @@ export interface MonthlyReportWalletPoint {
 
 export interface MonthlyReportRow {
   timestamp: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   walletName: string;
   categoryName: string;
@@ -124,7 +124,7 @@ export function buildMonthlyReportData(options: MonthlyReportOptions): MonthlyRe
     const current = dailyMap.get(dayKey) ?? { label, income: 0, expense: 0, net: 0 };
     if (transaction.type === 'income') {
       current.income += transaction.amount;
-    } else {
+    } else if (transaction.type === 'expense') {
       current.expense += transaction.amount;
     }
     current.net = current.income - current.expense;
@@ -185,7 +185,7 @@ export function buildMonthlyReportEmailHtml(data: MonthlyReportData) {
   const transactionRows = data.transactions
     .slice(0, 30)
     .map((transaction) => {
-      const sign = transaction.type === 'income' ? '+' : '-';
+      const sign = transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : '';
       return `
         <tr>
           <td>${new Date(transaction.timestamp).toLocaleString('en-IN')}</td>

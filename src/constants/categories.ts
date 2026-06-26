@@ -66,4 +66,12 @@ export const defaultCategories: Category[] = [
     isCustom: false,
     createdAt: Date.now(),
   },
+  {
+    id: 'category-transfer',
+    name: 'Transfer',
+    color: '#9CA3AF',
+    icon: 'swap-horizontal-outline',
+    isCustom: false,
+    createdAt: Date.now(),
+  },
 ];

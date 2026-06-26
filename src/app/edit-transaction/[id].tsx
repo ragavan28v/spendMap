@@ -2,13 +2,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
-import { Palette } from '@/constants/design';
 import { defaultCategories } from '@/constants/categories';
+import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
 import { updateTransactionWithWallets } from '@/services/firebase/firestore';
-import { showFeedbackDialog } from '@/store/feedbackDialogStore';
 import { useCategoryStore } from '@/store/categoryStore';
+import { showFeedbackDialog } from '@/store/feedbackDialogStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useWalletStore } from '@/store/walletStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -79,7 +79,35 @@ export default function EditTransactionScreen() {
     );
   }
 
+  if (transaction.isTransfer) {
+    return (
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: theme.background }}
+        contentContainerStyle={{ padding: 16, paddingTop: insets.top + 12, paddingBottom: 110, gap: 16 }}
+      >
+        <Card style={{ padding: 16, gap: 12 }}>
+          <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>Transfers cannot be edited</Text>
+          <Text style={{ color: theme.muted, fontSize: 13, lineHeight: 18 }}>
+            Transfer transactions are managed as wallet-to-wallet movements and cannot be edited from this screen.
+          </Text>
+          <Button label="Back" icon="arrow-back-outline" onPress={() => router.back()} secondary />
+        </Card>
+      </ScrollView>
+    );
+  }
+
   async function handleSave() {
+    if (!transaction) {
+      setError('Transaction data is missing.');
+      return;
+    }
+
+    if (transaction.isTransfer) {
+      setError('Transfers cannot be edited here. Use the transfer screen to create a new transfer instead.');
+      return;
+    }
+
     const amountValue = Number(amount);
     if (!Number.isFinite(amountValue) || amountValue <= 0) {
       setError('Enter a valid amount.');
@@ -106,30 +134,50 @@ export default function EditTransactionScreen() {
       return;
     }
 
+    const oldFundingWallet = transaction.fundingSourceWalletId
+      ? wallets.find((item) => item.id === transaction.fundingSourceWalletId)
+      : undefined;
+    const newFundingWallet = wallet.fundingSourceWalletId
+      ? wallets.find((item) => item.id === wallet.fundingSourceWalletId)
+      : undefined;
+
     const selectedWallet = wallet;
-    const sameWallet = selectedWallet.id === originalWallet.id;
-    const finalWalletBalance = sameWallet
+    const walletUpdatesMap = new Map<string, typeof wallets[number]>();
+
+    const finalWalletBalance = selectedWallet.id === originalWallet.id
       ? originalWallet.balance - oldSigned + newSigned
       : selectedWallet.balance + newSigned;
-    const walletUpdates = sameWallet
-      ? [
-          {
-            ...selectedWallet,
-            balance: finalWalletBalance,
-          },
-        ]
-      : [
-          {
-            ...originalWallet,
-            balance: originalWallet.balance - oldSigned,
-          },
-          {
-            ...selectedWallet,
-            balance: finalWalletBalance,
-          },
-        ];
+
+    walletUpdatesMap.set(selectedWallet.id, {
+      ...selectedWallet,
+      balance: finalWalletBalance,
+    });
+
+    if (selectedWallet.id !== originalWallet.id) {
+      walletUpdatesMap.set(originalWallet.id, {
+        ...originalWallet,
+        balance: originalWallet.balance - oldSigned,
+      });
+    }
+
+    if (oldFundingWallet) {
+      walletUpdatesMap.set(oldFundingWallet.id, {
+        ...oldFundingWallet,
+        balance: oldFundingWallet.balance - oldSigned,
+      });
+    }
+
+    if (newFundingWallet) {
+      const existing = walletUpdatesMap.get(newFundingWallet.id);
+      const adjusted = existing
+        ? { ...existing, balance: existing.balance + newSigned }
+        : { ...newFundingWallet, balance: newFundingWallet.balance + newSigned };
+      walletUpdatesMap.set(newFundingWallet.id, adjusted);
+    }
+
+    const walletUpdates = Array.from(walletUpdatesMap.values());
     const updatedTransaction = {
-      ...transaction,
+      ...(transaction as NonNullable<typeof transaction>),
       amount: amountValue,
       reason: reason.trim(),
       note: note.trim() || undefined,
@@ -140,6 +188,7 @@ export default function EditTransactionScreen() {
       categoryId: category.id,
       categoryName: category.name,
       categoryColor: category.color,
+      fundingSourceWalletId: wallet.fundingSourceWalletId,
     };
 
     setSaving(true);

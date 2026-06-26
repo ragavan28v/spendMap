@@ -14,13 +14,27 @@ export interface WalletState {
   updateWalletBalance: (walletId: string, amount: number) => void;
   upsertWallet: (wallet: Wallet) => void;
   toggleWallet: (walletId: string) => void;
+  deleteWallet: (walletId: string) => void;
+  linkWalletToParent: (walletId: string, parentWalletId?: string) => void;
   applyTransaction: (transaction: TransactionRecord) => void;
   applyTransactionLocal: (transaction: TransactionRecord) => void;
   totalBalance: () => number;
   getWalletById: (walletId: string) => Wallet | undefined;
 }
 
-export const useWalletStore = create<WalletState>()((set, get) => ({
+export const useWalletStore = create<WalletState>()((set, get) => {
+  const syncLinkedWalletBalances = (wallets: Wallet[]) => {
+    const walletById = new Map(wallets.map((wallet) => [wallet.id, wallet]));
+    return wallets.map((wallet) => {
+      if (!wallet.fundingSourceWalletId) {
+        return wallet;
+      }
+      const parent = walletById.get(wallet.fundingSourceWalletId);
+      return parent ? { ...wallet, balance: parent.balance } : wallet;
+    });
+  };
+
+  return {
     wallets: defaultWallets,
     selectedWalletId: defaultWallets[0].id,
 
@@ -60,16 +74,17 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
         const wallets = state.wallets.map((wallet: Wallet) =>
           wallet.id === walletId ? { ...wallet, balance: wallet.balance + amount } : wallet
         );
+        const syncedWallets = syncLinkedWalletBalances(wallets);
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
-          const wallet = wallets.find((item) => item.id === walletId);
+          const wallet = syncedWallets.find((item) => item.id === walletId);
           if (wallet) {
             saveOrQueueWallet(userId, wallet);
           }
         }
         return {
           ...state,
-          wallets,
+          wallets: syncedWallets,
         };
       });
     },
@@ -77,9 +92,11 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
     upsertWallet: (wallet) => {
       set((state) => {
         const exists = state.wallets.some((item) => item.id === wallet.id);
-        const wallets = exists
+        let wallets = exists
           ? state.wallets.map((item: Wallet) => (item.id === wallet.id ? wallet : item))
           : [...state.wallets, wallet];
+        wallets = syncLinkedWalletBalances(wallets);
+
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
           saveOrQueueWallet(userId, wallet);
@@ -108,47 +125,220 @@ export const useWalletStore = create<WalletState>()((set, get) => ({
       });
     },
 
-    applyTransaction: (transaction) => {
+    deleteWallet: (walletId) => {
       set((state) => {
-        const wallets = state.wallets.map((wallet: Wallet) =>
-          wallet.id === transaction.walletId
-            ? { ...wallet, balance: transaction.walletBalanceAfter }
-            : wallet
-        );
+        const wallets = state.wallets.filter((wallet) => wallet.id !== walletId);
+        const newSelectedId = state.selectedWalletId === walletId ? wallets[0]?.id || defaultWallets[0].id : state.selectedWalletId;
+
         const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
         if (userId) {
-          const wallet = wallets.find((item) => item.id === transaction.walletId);
-          if (wallet) {
-            saveOrQueueWallet(userId, wallet);
-          }
+          // TODO: Also delete associated transactions for this wallet
+          // For now, just remove the wallet from state
         }
+
         return {
           ...state,
           wallets,
+          selectedWalletId: newSelectedId,
+        };
+      });
+    },
+
+    linkWalletToParent: (walletId, parentWalletId) => {
+      set((state) => {
+        const wallets = state.wallets.map((w) =>
+          w.id === walletId ? { ...w, fundingSourceWalletId: parentWalletId } : w
+        );
+
+        const syncedWallets = syncLinkedWalletBalances(wallets);
+
+        const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
+        if (userId) {
+          const updatedWallet = syncedWallets.find((w) => w.id === walletId);
+          if (updatedWallet) {
+            saveOrQueueWallet(userId, updatedWallet);
+          }
+          if (parentWalletId) {
+            const updatedParent = syncedWallets.find((w) => w.id === parentWalletId);
+            if (updatedParent) {
+              saveOrQueueWallet(userId, updatedParent);
+            }
+          }
+        }
+
+        return {
+          ...state,
+          wallets: syncedWallets,
+        };
+      });
+    },
+
+    applyTransaction: (transaction) => {
+      set((state) => {
+        const sourceFundingDelta = new Map<string, number>();
+        const destinationFundingDelta = new Map<string, number>();
+
+        if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+          const sourceWallet = state.wallets.find((item) => item.id === transaction.sourceWalletId);
+          const destinationWallet = state.wallets.find((item) => item.id === transaction.destinationWalletId);
+
+          if (sourceWallet?.fundingSourceWalletId) {
+            sourceFundingDelta.set(sourceWallet.fundingSourceWalletId, -transaction.amount);
+          }
+          if (destinationWallet?.fundingSourceWalletId) {
+            destinationFundingDelta.set(destinationWallet.fundingSourceWalletId, transaction.amount);
+          }
+        }
+
+        const wallets = state.wallets.map((wallet: Wallet) => {
+          if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+            if (wallet.id === transaction.sourceWalletId) {
+              return { ...wallet, balance: transaction.sourceWalletBalanceAfter ?? transaction.walletBalanceAfter };
+            }
+            if (wallet.id === transaction.destinationWalletId) {
+              return { ...wallet, balance: transaction.destinationWalletBalanceAfter ?? wallet.balance };
+            }
+            const sourceDelta = sourceFundingDelta.get(wallet.id) ?? 0;
+            const destinationDelta = destinationFundingDelta.get(wallet.id) ?? 0;
+            if (sourceDelta || destinationDelta) {
+              return { ...wallet, balance: wallet.balance + sourceDelta + destinationDelta };
+            }
+            return wallet;
+          }
+
+          const targetWalletId = transaction.walletId;
+          if (wallet.id === targetWalletId) {
+            return { ...wallet, balance: transaction.walletBalanceAfter };
+          }
+
+          if (wallet.id === transaction.fundingSourceWalletId) {
+            const signedAmount = transaction.type === 'income' ? transaction.amount : transaction.type === 'expense' ? -transaction.amount : 0;
+            return { ...wallet, balance: wallet.balance + signedAmount };
+          }
+
+          return wallet;
+        });
+
+        const userId = useUserStore.getState().profile?.uid ?? getCurrentFirebaseUserId();
+        if (userId) {
+          if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+            const sourceWallet = wallets.find((item) => item.id === transaction.sourceWalletId);
+            const destinationWallet = wallets.find((item) => item.id === transaction.destinationWalletId);
+            const sourceFundingWallet = sourceWallet?.fundingSourceWalletId
+              ? wallets.find((item) => item.id === sourceWallet.fundingSourceWalletId)
+              : undefined;
+            const destinationFundingWallet = destinationWallet?.fundingSourceWalletId
+              ? wallets.find((item) => item.id === destinationWallet.fundingSourceWalletId)
+              : undefined;
+
+            if (sourceWallet) {
+              saveOrQueueWallet(userId, sourceWallet);
+            }
+            if (destinationWallet) {
+              saveOrQueueWallet(userId, destinationWallet);
+            }
+            if (sourceFundingWallet && sourceFundingWallet.id !== sourceWallet?.id) {
+              saveOrQueueWallet(userId, sourceFundingWallet);
+            }
+            if (destinationFundingWallet && destinationFundingWallet.id !== destinationWallet?.id && destinationFundingWallet.id !== sourceFundingWallet?.id) {
+              saveOrQueueWallet(userId, destinationFundingWallet);
+            }
+          } else {
+            const wallet = wallets.find((item) => item.id === transaction.walletId);
+            if (wallet) {
+              saveOrQueueWallet(userId, wallet);
+            }
+            if (transaction.fundingSourceWalletId) {
+              const fundingWallet = wallets.find((item) => item.id === transaction.fundingSourceWalletId);
+              if (fundingWallet) {
+                saveOrQueueWallet(userId, fundingWallet);
+              }
+            }
+          }
+        }
+
+        const syncedWallets = syncLinkedWalletBalances(wallets);
+        return {
+          ...state,
+          wallets: syncedWallets,
         };
       });
     },
 
     applyTransactionLocal: (transaction) => {
       set((state) => {
-        const wallets = state.wallets.map((wallet: Wallet) =>
-          wallet.id === transaction.walletId
-            ? { ...wallet, balance: transaction.walletBalanceAfter }
-            : wallet
-        );
+        const sourceFundingDelta = new Map<string, number>();
+        const destinationFundingDelta = new Map<string, number>();
+
+        if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+          const sourceWallet = state.wallets.find((item) => item.id === transaction.sourceWalletId);
+          const destinationWallet = state.wallets.find((item) => item.id === transaction.destinationWalletId);
+
+          if (sourceWallet?.fundingSourceWalletId) {
+            sourceFundingDelta.set(sourceWallet.fundingSourceWalletId, -transaction.amount);
+          }
+          if (destinationWallet?.fundingSourceWalletId) {
+            destinationFundingDelta.set(destinationWallet.fundingSourceWalletId, transaction.amount);
+          }
+        }
+
+        const wallets = state.wallets.map((wallet: Wallet) => {
+          if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+            if (wallet.id === transaction.sourceWalletId) {
+              return { ...wallet, balance: transaction.sourceWalletBalanceAfter ?? transaction.walletBalanceAfter };
+            }
+            if (wallet.id === transaction.destinationWalletId) {
+              return { ...wallet, balance: transaction.destinationWalletBalanceAfter ?? wallet.balance };
+            }
+            const sourceDelta = sourceFundingDelta.get(wallet.id) ?? 0;
+            const destinationDelta = destinationFundingDelta.get(wallet.id) ?? 0;
+            if (sourceDelta || destinationDelta) {
+              return { ...wallet, balance: wallet.balance + sourceDelta + destinationDelta };
+            }
+            return wallet;
+          }
+
+          const targetWalletId = transaction.walletId;
+          if (wallet.id === targetWalletId) {
+            return { ...wallet, balance: transaction.walletBalanceAfter };
+          }
+
+          if (wallet.id === transaction.fundingSourceWalletId) {
+            const signedAmount = transaction.type === 'income' ? transaction.amount : transaction.type === 'expense' ? -transaction.amount : 0;
+            return { ...wallet, balance: wallet.balance + signedAmount };
+          }
+
+          return wallet;
+        });
+        const syncedWallets = syncLinkedWalletBalances(wallets);
         return {
           ...state,
-          wallets,
+          wallets: syncedWallets,
         };
       });
     },
 
     totalBalance: () => {
-      return get().wallets.reduce((sum, wallet) => (wallet.isEnabled ? sum + wallet.balance : sum), 0);
+      const seen = new Set<string>();
+      return get().wallets.reduce((sum, wallet) => {
+        if (!wallet.isEnabled) {
+          return sum;
+        }
+
+        const effectiveWalletId = wallet.fundingSourceWalletId ?? wallet.id;
+        if (seen.has(effectiveWalletId)) {
+          return sum;
+        }
+
+        seen.add(effectiveWalletId);
+        const effectiveWallet = get().wallets.find((item) => item.id === effectiveWalletId);
+        return sum + (effectiveWallet ? effectiveWallet.balance : wallet.balance);
+      }, 0);
     },
 
     getWalletById: (walletId) => {
       return get().wallets.find((wallet) => wallet.id === walletId);
     },
-  }));
+  };
+});
 

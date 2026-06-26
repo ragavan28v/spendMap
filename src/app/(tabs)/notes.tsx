@@ -8,8 +8,8 @@ import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { scheduleReminderNotification } from '@/services/notifications/notifications';
 import { showFeedbackDialog } from '@/store/feedbackDialogStore';
-import { useNotificationStore } from '@/store/notificationStore';
 import { useNoteStore } from '@/store/noteStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useUserStore } from '@/store/userStore';
 import { NoteItem } from '@/types';
 import { formatDateLabel, formatDateTimeLabel } from '@/utils/formatters';
@@ -65,7 +65,7 @@ export default function NotesScreen() {
       return;
     }
 
-    if (isReminder && reminderDate.getTime() <= Date.now()) {
+    if (isReminder && reminderDate && reminderDate.getTime() <= Date.now()) {
       setError('Pick a future date and time for the reminder.');
       return;
     }
@@ -91,12 +91,12 @@ export default function NotesScreen() {
 
     if (isReminder && notificationsEnabled) {
       try {
-        reminderNotificationId = await scheduleReminderNotification({
+        reminderNotificationId = (await scheduleReminderNotification({
           title: `Reminder: ${selectedTitle}`,
           body: trimmedContent || 'You asked SpendMap to remind you.',
           triggerAt: reminderDate!,
           noteId,
-        });
+        })) ?? undefined;
       } catch (scheduleError) {
         console.warn('Unable to schedule reminder notification.', scheduleError);
       }

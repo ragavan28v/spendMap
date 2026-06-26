@@ -149,6 +149,23 @@ export async function deleteTransactionWithWallet(
   await batch.commit();
 }
 
+export async function deleteTransactionWithWallets(
+  userId: string,
+  transactionId: string,
+  wallets: Wallet[]
+) {
+  const transactionRef = doc(getTransactionsCollection(userId), transactionId);
+  const batch = writeBatch(firebaseFirestore);
+
+  batch.delete(transactionRef);
+  wallets.forEach((wallet) => {
+    const walletRef = doc(getWalletsCollection(userId), wallet.id);
+    batch.set(walletRef, withoutUndefinedFields(wallet));
+  });
+
+  await batch.commit();
+}
+
 export async function saveCategory(userId: string, category: Category) {
   const categoryRef = doc(getCategoriesCollection(userId), category.id);
   await setDoc(categoryRef, withoutUndefinedFields(category));

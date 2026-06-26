@@ -5,7 +5,7 @@ import React from 'react';
 import { Pressable, Text, ViewStyle } from 'react-native';
 
 interface ButtonProps {
-  label: string;
+  label?: string;
   onPress: () => void;
   secondary?: boolean;
   icon?: string;
@@ -13,7 +13,7 @@ interface ButtonProps {
   compact?: boolean;
 }
 
-export function Button({ label, onPress, secondary, icon, style, compact }: ButtonProps) {
+export function Button({ label = '', onPress, secondary, icon, style, compact }: ButtonProps) {
   const theme = useAppTheme();
   const iconOnly = !label;
 

@@ -8,7 +8,7 @@ export type WalletType =
   | 'credit_card'
   | 'custom';
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 export type RecurringType = 'daily' | 'weekly' | 'monthly' | 'none';
 export type AppNotificationKind = 'transaction' | 'report' | 'reminder' | 'system';
 
@@ -22,6 +22,7 @@ export interface Wallet {
   isEnabled: boolean;
   isDefault: boolean;
   createdAt: number;
+  fundingSourceWalletId?: string;
 }
 
 export interface Category {
@@ -50,6 +51,17 @@ export interface TransactionRecord {
   balanceAfterTransaction: number;
   isRecurring: boolean;
   recurringType?: RecurringType;
+  isTransfer?: boolean;
+  sourceWalletId?: string;
+  sourceWalletName?: string;
+  destinationWalletId?: string;
+  destinationWalletName?: string;
+  sourceWalletBalanceAfter?: number;
+  destinationWalletBalanceAfter?: number;
+  sourceFundingWalletId?: string;
+  destinationFundingWalletId?: string;
+  fundingSourceWalletId?: string;
+  fundingSourceWalletName?: string;
 }
 
 export interface NoteItem {

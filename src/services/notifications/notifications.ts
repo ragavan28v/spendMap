@@ -8,11 +8,16 @@ export async function requestNotificationPermission() {
   return false;
 }
 
-export async function cancelScheduledNotification() {
+export async function cancelScheduledNotification(notificationId?: string) {
   return;
 }
 
-export async function scheduleReminderNotification() {
+export async function scheduleReminderNotification(options?: {
+  title?: string;
+  body?: string;
+  triggerAt?: Date;
+  noteId?: string;
+}) {
   return null;
 }
 

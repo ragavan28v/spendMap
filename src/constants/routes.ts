@@ -6,5 +6,6 @@ export const Routes = {
   settings: '/settings',
   addExpense: '/add-expense',
   addIncome: '/add-income',
+  addTransfer: '/add-transfer',
   login: '/login',
 };

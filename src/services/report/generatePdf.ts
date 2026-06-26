@@ -139,7 +139,7 @@ function buildTransactionRow(
   const cellValues = [
     new Date(transaction.timestamp).toLocaleDateString('en-IN'),
     transaction.type,
-    `${transaction.type === 'income' ? '+' : '-'}${formatReportMoney(transaction.amount, currency)}`,
+    `${transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}${formatReportMoney(transaction.amount, currency)}`,
     transaction.walletName,
     transaction.categoryName,
     transaction.reason,

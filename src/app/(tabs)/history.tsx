@@ -7,7 +7,7 @@ import { SelectionChip } from '@/components/ui/selection-chip';
 import { Palette } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { deleteTransactionWithWallet } from '@/services/firebase/firestore';
+import { deleteTransactionWithWallets } from '@/services/firebase/firestore';
 import { showFeedbackDialog } from '@/store/feedbackDialogStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
@@ -62,9 +62,80 @@ export default function HistoryScreen() {
       variant: 'warning',
       primaryLabel: 'Delete',
       secondaryLabel: 'Cancel',
-      onPrimary: () => {
+      onPrimary: async () => {
+        if (transaction.isTransfer && transaction.sourceWalletId && transaction.destinationWalletId) {
+          const sourceWallet = wallets.find((item) => item.id === transaction.sourceWalletId);
+          const destinationWallet = wallets.find((item) => item.id === transaction.destinationWalletId);
+          const sourceFundingWallet = transaction.sourceFundingWalletId
+            ? wallets.find((item) => item.id === transaction.sourceFundingWalletId)
+            : sourceWallet?.fundingSourceWalletId
+            ? wallets.find((item) => item.id === sourceWallet.fundingSourceWalletId)
+            : undefined;
+          const destinationFundingWallet = transaction.destinationFundingWalletId
+            ? wallets.find((item) => item.id === transaction.destinationFundingWalletId)
+            : destinationWallet?.fundingSourceWalletId
+            ? wallets.find((item) => item.id === destinationWallet.fundingSourceWalletId)
+            : undefined;
+
+          const updatedSourceWallet = sourceWallet
+            ? { ...sourceWallet, balance: sourceWallet.balance + transaction.amount }
+            : undefined;
+          const updatedDestinationWallet = destinationWallet
+            ? { ...destinationWallet, balance: destinationWallet.balance - transaction.amount }
+            : undefined;
+
+          const walletUpdates = new Map<string, typeof updatedSourceWallet>();
+          if (updatedSourceWallet) {
+            walletUpdates.set(updatedSourceWallet.id, updatedSourceWallet);
+          }
+          if (updatedDestinationWallet) {
+            walletUpdates.set(updatedDestinationWallet.id, updatedDestinationWallet);
+          }
+
+          if (sourceFundingWallet) {
+            walletUpdates.set(sourceFundingWallet.id, {
+              ...sourceFundingWallet,
+              balance:
+                (walletUpdates.get(sourceFundingWallet.id)?.balance ?? sourceFundingWallet.balance) +
+                transaction.amount,
+            });
+          }
+          if (destinationFundingWallet) {
+            walletUpdates.set(destinationFundingWallet.id, {
+              ...destinationFundingWallet,
+              balance:
+                (walletUpdates.get(destinationFundingWallet.id)?.balance ?? destinationFundingWallet.balance) -
+                transaction.amount,
+            });
+          }
+
+          const walletsToSave = Array.from(walletUpdates.values()).filter(
+            (item): item is NonNullable<typeof item> => Boolean(item)
+          );
+
+          walletsToSave.forEach((item) => upsertWallet(item));
+          removeTransactionLocal(transaction.id);
+          removeNotificationsByTransactionId(transaction.id);
+
+          const userId = getCurrentFirebaseUserId();
+          if (userId) {
+            await deleteTransactionWithWallets(userId, transaction.id, walletsToSave);
+          }
+
+          showFeedbackDialog({
+            title: 'Transfer removed',
+            message: 'The transfer was removed and wallet balances were restored.',
+            variant: 'success',
+          });
+          return;
+        }
+
         const signedAmount = transaction.type === 'income' ? transaction.amount : -transaction.amount;
         const wallet = wallets.find((item) => item.id === transaction.walletId);
+        const fundingWallet = transaction.fundingSourceWalletId
+          ? wallets.find((item) => item.id === transaction.fundingSourceWalletId)
+          : undefined;
+
         if (!wallet) {
           removeTransactionLocal(transaction.id);
           removeNotificationsByTransactionId(transaction.id);
@@ -81,13 +152,18 @@ export default function HistoryScreen() {
           balance: wallet.balance - signedAmount,
         };
 
-        upsertWallet(restoredWallet);
+        const walletsToSave = [restoredWallet];
+        if (fundingWallet) {
+          walletsToSave.push({ ...fundingWallet, balance: fundingWallet.balance - signedAmount });
+        }
+
+        walletsToSave.forEach((item) => upsertWallet(item));
         removeTransactionLocal(transaction.id);
         removeNotificationsByTransactionId(transaction.id);
 
         const userId = getCurrentFirebaseUserId();
         if (userId) {
-          void deleteTransactionWithWallet(userId, transaction.id, restoredWallet);
+          await deleteTransactionWithWallets(userId, transaction.id, walletsToSave);
         }
 
         showFeedbackDialog({
@@ -142,6 +218,13 @@ export default function HistoryScreen() {
             color={Palette.orange}
             selected={type === 'expense'}
             onPress={() => setType('expense')}
+          />
+          <SelectionChip
+            label="Transfer"
+            icon="swap-horizontal-outline"
+            color={Palette.purple}
+            selected={type === 'transfer'}
+            onPress={() => setType('transfer')}
           />
           <SelectionChip
             label="High to low"

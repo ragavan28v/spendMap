@@ -2,21 +2,22 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SelectionChip } from '@/components/ui/selection-chip';
-import { Palette } from '@/constants/design';
+import { Palette, Radius } from '@/constants/design';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
-import { saveTransactionWithWallet } from '@/services/firebase/firestore';
 import { buildTransaction } from '@/services/finance/transactions';
+import { getCurrentFirebaseUserId } from '@/services/firebase/auth';
+import { saveTransactionWithWallet, updateTransactionWithWallets } from '@/services/firebase/firestore';
 import { useCategoryStore } from '@/store/categoryStore';
 import { showFeedbackDialog } from '@/store/feedbackDialogStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useTransactionStore } from '@/store/transactionStore';
 import { useWalletStore } from '@/store/walletStore';
 import { RecurringType } from '@/types';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDateLabel } from '@/utils/formatters';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 const recurringOptions: RecurringType[] = ['none', 'daily', 'weekly', 'monthly'];
 
@@ -32,6 +33,8 @@ export default function AddExpenseScreen() {
   const [walletId, setWalletId] = useState(wallets[0]?.id ?? '');
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '');
   const [recurringType, setRecurringType] = useState<RecurringType>('none');
+  const [transactionDate, setTransactionDate] = useState(() => new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,6 +56,10 @@ export default function AddExpenseScreen() {
     }
 
     try {
+      const fundingWallet = selectedWallet.fundingSourceWalletId
+        ? wallets.find((wallet) => wallet.id === selectedWallet.fundingSourceWalletId)
+        : undefined;
+
       const transaction = buildTransaction({
         type: 'expense',
         amount: amountValue,
@@ -60,17 +67,25 @@ export default function AddExpenseScreen() {
         category: selectedCategory,
         reason,
         note,
+        timestamp: transactionDate.getTime(),
         recurringType,
         totalBalanceBefore: totalBalance,
+        fundingSourceWalletName: fundingWallet?.name,
       });
       const updatedWallet = {
         ...selectedWallet,
         balance: transaction.walletBalanceAfter,
       };
 
+      const walletsToSave = fundingWallet ? [updatedWallet, { ...fundingWallet, balance: fundingWallet.balance + transaction.amount * (transaction.type === 'income' ? 1 : -1) }] : [updatedWallet];
+
       setIsSaving(true);
       setError(null);
-      await saveTransactionWithWallet(userId, transaction, updatedWallet);
+      if (fundingWallet) {
+        await updateTransactionWithWallets(userId, transaction, walletsToSave);
+      } else {
+        await saveTransactionWithWallet(userId, transaction, updatedWallet);
+      }
       useWalletStore.getState().applyTransactionLocal(transaction);
       useTransactionStore.getState().addTransactionLocal(transaction);
       useNotificationStore.getState().addNotification({
@@ -123,6 +138,35 @@ export default function AddExpenseScreen() {
           multiline
           numberOfLines={3}
         />
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: theme.muted, fontSize: 14, fontWeight: '700' }}>Transaction date</Text>
+          <Pressable
+            onPress={() => setShowDatePicker(true)}
+            style={{
+              borderRadius: Radius.md,
+              borderWidth: 1,
+              borderColor: theme.border,
+              backgroundColor: theme.inputBackground,
+              paddingVertical: 14,
+              paddingHorizontal: 14,
+            }}
+          >
+            <Text style={{ color: theme.text, fontSize: 15 }}>{formatDateLabel(transactionDate.getTime())}</Text>
+          </Pressable>
+          {showDatePicker ? (
+            <DateTimePicker
+              value={transactionDate}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(_event, selectedDate) => {
+                const currentDate = selectedDate ?? transactionDate;
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) setTransactionDate(currentDate);
+              }}
+            />
+          ) : null}
+        </View>
       </Card>
 
       <PickerSection title="Wallet used" theme={theme}>

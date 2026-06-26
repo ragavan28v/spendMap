@@ -26,11 +26,11 @@ export default function AnalyticsScreen() {
     const start = getStart(period);
     const scoped = transactions.filter((transaction) => transaction.timestamp >= start);
     const income = scoped.filter((item) => item.type === 'income').reduce((sum, item) => sum + item.amount, 0);
-    const expense = scoped.filter((item) => item.type === 'expense').reduce((sum, item) => sum + item.amount, 0);
+    const expense = scoped.filter((item) => item.type === 'expense' && !item.isTransfer).reduce((sum, item) => sum + item.amount, 0);
     const categoryTotals = new Map<string, { amount: number; color: string }>();
 
     scoped
-      .filter((item) => item.type === 'expense')
+      .filter((item) => item.type === 'expense' && !item.isTransfer)
       .forEach((item) => {
         const current = categoryTotals.get(item.categoryName) ?? { amount: 0, color: item.categoryColor };
         categoryTotals.set(item.categoryName, { amount: current.amount + item.amount, color: item.categoryColor });
@@ -38,7 +38,7 @@ export default function AnalyticsScreen() {
 
     const walletTotals = new Map<string, { name: string; color: string; amount: number }>();
     scoped
-      .filter((transaction) => transaction.type === 'expense')
+      .filter((transaction) => transaction.type === 'expense' && !transaction.isTransfer)
       .forEach((transaction) => {
         const wallet = wallets.find((item) => item.id === transaction.walletId);
         const current = walletTotals.get(transaction.walletId) ?? {

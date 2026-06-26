@@ -53,9 +53,22 @@ export function TransactionCard({ transaction, onEdit, onDelete }: TransactionCa
 
         {expanded ? (
           <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }}>
-            <Detail label="Wallet" value={transaction.walletName} />
-            <Detail label="Wallet balance after" value={formatCurrency(transaction.walletBalanceAfter)} />
-            <Detail label="Total balance after" value={formatCurrency(transaction.balanceAfterTransaction)} />
+            {transaction.isTransfer ? (
+              <>
+                <Detail label="Transfer from" value={transaction.sourceWalletName ?? transaction.walletName} />
+                <Detail label="Transfer to" value={transaction.destinationWalletName ?? 'Unknown'} />
+                <Detail label="Amount" value={`${formatCurrency(transaction.amount)} transferred`} />
+              </>
+            ) : (
+              <>
+                <Detail label="Wallet" value={transaction.walletName} />
+                <Detail label="Wallet balance after" value={formatCurrency(transaction.walletBalanceAfter)} />
+                <Detail label="Total balance after" value={formatCurrency(transaction.balanceAfterTransaction)} />
+                {transaction.fundingSourceWalletName ? (
+                  <Detail label="Funding source" value={transaction.fundingSourceWalletName} />
+                ) : null}
+              </>
+            )}
             <Detail label="Recurring" value={transaction.isRecurring ? transaction.recurringType ?? 'Yes' : 'No'} />
             {transaction.note ? <Detail label="Note" value={transaction.note} /> : null}
             {onEdit || onDelete ? (
