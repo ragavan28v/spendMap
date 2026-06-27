@@ -1,7 +1,20 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { Auth, getAuth, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
+
+let getReactNativePersistence: ((storage: any) => any) | null = null;
+try {
+  // Dynamically require to avoid bundler/type issues on web
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const rnAuth = require('firebase/auth/react-native');
+  getReactNativePersistence = rnAuth.getReactNativePersistence;
+} catch (e) {
+  // module not available; we'll fall back to default persistence
+  getReactNativePersistence = null;
+}
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '<YOUR_FIREBASE_API_KEY>',
@@ -20,6 +33,20 @@ if (!getApps().length) {
 }
 
 export const firebaseApp = app;
-export const firebaseAuth = getAuth(app);
+
+// Use React Native persistence when available (AsyncStorage)
+let firebaseAuth: Auth;
+if (Platform.OS !== 'web' && getReactNativePersistence) {
+  try {
+    firebaseAuth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch (e) {
+    // Fallback to default getAuth if initializeAuth fails
+    firebaseAuth = getAuth(app);
+  }
+} else {
+  firebaseAuth = getAuth(app);
+}
+
+export { firebaseAuth };
 export const firebaseFirestore = getFirestore(app);
 export const firebaseStorage = getStorage(app);

@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { Redirect, Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { User } from 'firebase/auth';
@@ -10,7 +11,7 @@ import { AppLockScreen } from '@/components/security/app-lock-screen';
 import { FeedbackDialog } from '@/components/ui/feedback-dialog';
 import { defaultWallets } from '@/constants/wallets';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { getCurrentFirebaseUserId, observeAuthState } from '@/services/firebase/auth';
+import { configureGoogleSignIn, getCurrentFirebaseUserId, observeAuthState, restoreFirebaseAuth } from '@/services/firebase/auth';
 import {
     fetchUserCategories,
     fetchUserNotes,
@@ -61,6 +62,7 @@ export default function RootLayout() {
   const [lockReady, setLockReady] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [authResolved, setAuthResolved] = useState(false);
+  const [authRestored, setAuthRestored] = useState(false);
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
@@ -157,6 +159,20 @@ export default function RootLayout() {
   }, [settings.appLockEnabled]);
 
   useEffect(() => {
+    const manifest = Constants.expoConfig ?? Constants.manifest;
+    const extra = (manifest as { extra?: Record<string, string> })?.extra ?? null;
+    const googleWebClientId = extra?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    const googleIosClientId = extra?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined;
+
+    if (!googleWebClientId) {
+      return;
+    }
+
+    configureGoogleSignIn({ webClientId: googleWebClientId, iosClientId: googleIosClientId });
+    void restoreFirebaseAuth();
+  }, []);
+
+  useEffect(() => {
     if (!settings.notificationsEnabled) {
       return;
     }
@@ -179,6 +195,10 @@ export default function RootLayout() {
   }, [addNotification, notes, notifications, settings.notificationsEnabled]);
 
   useEffect(() => {
+    if (!authRestored) {
+      return;
+    }
+
     let active = true;
     const unsubscribe = observeAuthState((user) => {
       setSessionUser(user);
@@ -326,6 +346,7 @@ export default function RootLayout() {
       unsubscribe();
     };
   }, [
+    authRestored,
     setProfile,
     clearProfile,
     initializeWallets,
@@ -335,6 +356,40 @@ export default function RootLayout() {
     setNotes,
     hydrateNotifications,
   ]);
+
+  useEffect(() => {
+    let active = true;
+    const manifest = Constants.expoConfig ?? Constants.manifest;
+    const extra = (manifest as { extra?: Record<string, string> })?.extra ?? null;
+    const googleWebClientId = extra?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    const googleIosClientId = extra?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined;
+
+    async function initializeGoogleAuth() {
+      if (!googleWebClientId) {
+        if (active) {
+          setAuthRestored(true);
+        }
+        return;
+      }
+
+      configureGoogleSignIn({ webClientId: googleWebClientId, iosClientId: googleIosClientId });
+      try {
+        await restoreFirebaseAuth();
+      } catch (error) {
+        console.warn('Silent auth restore failed.', error);
+      } finally {
+        if (active) {
+          setAuthRestored(true);
+        }
+      }
+    }
+
+    void initializeGoogleAuth();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     async function flushForCurrentUser() {
@@ -374,7 +429,7 @@ export default function RootLayout() {
         <StatusBar style={theme.themeMode === 'dark' ? 'light' : 'dark'} />
         <AnimatedSplashOverlay />
         <FeedbackDialog />
-        {!themeReady || !authResolved || (sessionUser && !sessionHydrated) || !lockReady ? (
+        {!themeReady || !authResolved || !authRestored || (sessionUser && !sessionHydrated) || !lockReady ? (
           <LoadingShell />
         ) : !sessionUser ? pathname === '/login' ? (
           <Slot />

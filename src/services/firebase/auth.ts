@@ -24,6 +24,41 @@ export async function signInWithGoogle(idToken: string): Promise<UserProfile> {
   };
 }
 
+export function configureGoogleSignIn(config: { webClientId: string; iosClientId?: string }) {
+  if (!config.webClientId) {
+    return;
+  }
+
+  GoogleSignin.configure({
+    webClientId: config.webClientId,
+    iosClientId: config.iosClientId,
+    scopes: ['profile', 'email'],
+  });
+}
+
+export async function restoreFirebaseAuth(): Promise<User | null> {
+  if (firebaseAuth.currentUser) {
+    return firebaseAuth.currentUser;
+  }
+
+  try {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });
+    await GoogleSignin.signInSilently();
+    const tokens = await GoogleSignin.getTokens();
+    const idToken = tokens.idToken;
+    if (!idToken) {
+      return null;
+    }
+
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(firebaseAuth, credential);
+    return result.user;
+  } catch (error) {
+    console.warn('Unable to restore Firebase auth silently.', error);
+    return null;
+  }
+}
+
 export function observeAuthState(callback: (user: User | null) => void) {
   return onAuthStateChanged(firebaseAuth, callback);
 }
